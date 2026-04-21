@@ -1,0 +1,12 @@
+{
+  "name": "carentci",
+  "version": "1.0.0",
+  "description": "CarRent CI - Location et vente de véhicules en Côte d'Ivoire",
+  "scripts": {
+    "start": "cd backend && node server.js",
+    "install": "cd backend && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

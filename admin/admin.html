@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dev2r1wlo/image/upload/v1774859972/carentci/static/logo.png">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - CarRent CI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-100">
+
+<!-- NAVBAR -->
+<nav class="bg-black text-white shadow-lg border-b border-orange-500/30">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div class="flex items-center space-x-3">
+      <img src="https://res.cloudinary.com/dev2r1wlo/image/upload/v1774859972/carentci/static/logo.png" alt="CarRent CI" class="h-14 w-auto object-contain">
+    </div>
+<button onclick="showSection('overview')" id="btnOverview" class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition">
+  <i class="fas fa-tachometer-alt mr-2"></i>Vue d'ensemble
+</button>
+
+
+    <div class="flex items-center space-x-4">
+      <button onclick="showSection('reservations')" id="btnReservations" class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition">
+        <i class="fas fa-calendar-alt mr-2"></i>Réservations
+      </button>
+      <button onclick="showSection('vehicles')" id="btnVehicles" class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition">
+        <i class="fas fa-car mr-2"></i>Véhicules
+      </button>
+<button onclick="showSection('stats')" id="btnStats" class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition">
+  <i class="fas fa-chart-line mr-2"></i>Statistiques
+</button>
+<button onclick="showSection('promoCodes')" id="btnPromoCodes" class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition">
+  <i class="fas fa-tag mr-2"></i>Codes Promo
+</button>
+
+
+      <button onclick="logout()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition">
+        <i class="fas fa-sign-out-alt mr-2"></i>Déconnexion
+      </button>
+      <!-- Indicateur notifications -->
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <div id="notifIndicator" style="width:10px;height:10px;border-radius:50%;background:#ef4444;transition:background 0.3s;" title="Notifications déconnectées"></div>
+        <span style="opacity:0.8;">Notifs</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+    <div class="text-center mb-8">
+      <i class="fas fa-shield-alt text-orange-500 text-5xl mb-4"></i>
+      <h2 class="text-3xl font-bold text-gray-800">Connexion Admin</h2>
+    </div>
+    
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Nom d'utilisateur</label>
+        <input type="text" id="loginEmail" required placeholder="Votre nom d'utilisateur"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Mot de passe</label>
+        <input type="password" id="loginPassword" required
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+      </div>
+      
+      <button type="submit" 
+        class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-lg font-bold hover:from-orange-600 hover:to-orange-700 transition">
+        Se connecter
+      </button>
+    </form>
+    
+    <p class="text-center text-sm text-gray-500 mt-4">
+      Accès réservé aux administrateurs
+    </p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+  
+  <!-- SECTION VUE D'ENSEMBLE -->
+<div id="sectionOverview" class="hidden">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-2xl font-bold text-gray-800">
+        <i class="fas fa-tachometer-alt text-orange-500 mr-2"></i>Vue d'ensemble
+      </h2>
+      <button onclick="loadOverview()" class="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-sm font-semibold hover:bg-orange-50 hover:text-orange-600 transition">
+        <i class="fas fa-sync-alt"></i>Actualiser
+      </button>
+    </div>
+    <div id="overviewContent"></div>
+  </div>
+</div>
+<!-- FIN SECTION VUE D'ENSEMBLE -->
+
+  <!-- SECTION RÉSERVATIONS -->
+  <div id="sectionReservations">
+  
+  <!-- STATS -->
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="grid md:grid-cols-4 gap-6 mb-8">
+      
+      <div onclick="filterReservations('')" id="resCardAll" class="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 shine-effect animate-slideDown cursor-pointer ring-4 ring-transparent hover:ring-blue-300">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Total Réservations</p>
+            <p id="statTotal" class="text-3xl font-bold text-gray-800">0</p>
+          </div>
+          <i class="fas fa-calendar-alt text-4xl text-blue-500 animate-pulse-slow"></i>
+        </div>
+      </div>
+      
+      <div onclick="filterReservations('pending')" id="resCardPending" class="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 shine-effect animate-slideDown cursor-pointer ring-4 ring-transparent hover:ring-yellow-300" style="animation-delay: 0.1s">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">En attente</p>
+            <p id="statPending" class="text-3xl font-bold text-yellow-500">0</p>
+          </div>
+          <i class="fas fa-clock text-4xl text-yellow-500 animate-pulse-slow"></i>
+        </div>
+      </div>
+      
+      <div onclick="filterReservations('confirmed')" id="resCardConfirmed" class="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 shine-effect animate-slideDown cursor-pointer ring-4 ring-transparent hover:ring-green-300" style="animation-delay: 0.2s">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Confirmées</p>
+            <p id="statConfirmed" class="text-3xl font-bold text-green-500">0</p>
+          </div>
+          <i class="fas fa-check-circle text-4xl text-green-500 animate-pulse-slow"></i>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 shine-effect animate-slideDown" style="animation-delay: 0.3s">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Revenu Total</p>
+            <p id="statRevenue" class="text-2xl font-bold text-orange-500">0 FCFA</p>
+          </div>
+          <i class="fas fa-money-bill-wave text-4xl text-orange-500 animate-pulse-slow"></i>
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- FILTRES -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+      <div class="flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex flex-wrap gap-4 items-center">
+          <select id="filterStatus" class="p-2 border border-gray-300 rounded-lg">
+            <option value="">Tous les statuts</option>
+            <option value="pending">En attente</option>
+            <option value="confirmed">Confirmées</option>
+            <option value="completed">Terminées</option>
+            <option value="cancelled">Annulées</option>
+          </select>
+          
+          <button onclick="loadReservations()" class="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition">
+            <i class="fas fa-sync-alt mr-2"></i>Actualiser
+          </button>
+        </div>
+        
+        <button onclick="showClientsModal()" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-lg">
+          <i class="fas fa-users mr-2"></i>Liste des clients
+        </button>
+        <div class="flex gap-2">
+          <button onclick="exportCSV()" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-5 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-lg font-semibold">
+            <i class="fas fa-file-csv mr-2"></i>CSV
+          </button>
+          <button onclick="exportPDF()" class="bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition shadow-lg font-semibold">
+            <i class="fas fa-file-pdf mr-2"></i>PDF
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TABLEAU RÉSERVATIONS -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-2xl font-bold text-gray-800">
+          <i class="fas fa-list mr-2 text-orange-500"></i>Réservations
+        </h2>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">WhatsApp</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Véhicule</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Réservé le</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="reservationsTable" class="divide-y divide-gray-200">
+            <tr>
+              <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                <p>Chargement...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+  </div>
+  
+  </div>
+  <!-- FIN SECTION RÉSERVATIONS -->
+  
+  <!-- SECTION VÉHICULES -->
+  <div id="sectionVehicles" class="hidden">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      
+      <!-- STATISTIQUES -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Total Véhicules -->
+        <div onclick="filterVehiclesGrid('all')" id="statCardAll" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg transform hover:scale-105 transition-all cursor-pointer ring-4 ring-transparent hover:ring-white/50">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-blue-100 text-sm font-semibold mb-1">Total Véhicules</p>
+              <p class="text-3xl font-black" id="totalVehicles">0</p>
+            </div>
+            <div class="bg-white/20 w-14 h-14 rounded-xl flex items-center justify-center">
+              <i class="fas fa-car text-2xl"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Véhicules Location -->
+        <div onclick="filterVehiclesGrid('location')" id="statCardLocation" class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg transform hover:scale-105 transition-all cursor-pointer ring-4 ring-transparent hover:ring-white/50">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-green-100 text-sm font-semibold mb-1">Location</p>
+              <p class="text-3xl font-black" id="locationVehicles">0</p>
+            </div>
+            <div class="bg-white/20 w-14 h-14 rounded-xl flex items-center justify-center">
+              <i class="fas fa-key text-2xl"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Véhicules Vente -->
+        <div onclick="filterVehiclesGrid('vente')" id="statCardVente" class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg transform hover:scale-105 transition-all cursor-pointer ring-4 ring-transparent hover:ring-white/50">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm font-semibold mb-1">Vente</p>
+              <p class="text-3xl font-black" id="saleVehicles">0</p>
+            </div>
+            <div class="bg-white/20 w-14 h-14 rounded-xl flex items-center justify-center">
+              <i class="fas fa-shopping-cart text-2xl"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stock Faible -->
+        <div onclick="filterVehiclesGrid('lowstock')" id="statCardLowstock" class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg transform hover:scale-105 transition-all cursor-pointer ring-4 ring-transparent hover:ring-white/50">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-orange-100 text-sm font-semibold mb-1">Stock Faible</p>
+              <p class="text-3xl font-black" id="lowStockVehicles">0</p>
+            </div>
+            <div class="bg-white/20 w-14 h-14 rounded-xl flex items-center justify-center">
+              <i class="fas fa-exclamation-triangle text-2xl"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- BOUTON AJOUTER -->
+      <div class="mb-6">
+        <button onclick="openVehicleModal()" class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-300 font-semibold shadow-lg transform hover:scale-105">
+          <i class="fas fa-plus mr-2"></i>Ajouter un véhicule
+        </button>
+      </div>
+      
+      <!-- LISTE VÉHICULES -->
+      <div class="grid md:grid-cols-3 gap-6" id="vehiclesGrid">
+        <div class="col-span-3 text-center py-8">
+          <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  <!-- FIN SECTION VÉHICULES -->
+
+  <!-- SECTION CODES PROMO -->
+  <div id="sectionPromoCodes" class="hidden">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-tag text-orange-500 mr-2"></i>Codes Promo</h2>
+        <button onclick="openPromoModal()" class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2 rounded-lg hover:from-orange-600 hover:to-orange-700 transition font-semibold shadow">
+          <i class="fas fa-plus mr-2"></i>Nouveau code
+        </button>
+      </div>
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">WhatsApp client</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Réduction</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiration</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="promoCodesTable" class="divide-y divide-gray-200">
+            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- FIN SECTION CODES PROMO -->
+
+  <!-- MODAL CODES PROMO -->
+  <div id="promoModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" style="display:none;">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl mx-4">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-tag text-orange-500 mr-2"></i><span id="promoModalTitle">Nouveau code promo</span></h3>
+        <button onclick="closePromoModal()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="promoForm" onsubmit="submitPromoForm(event)" class="space-y-4">
+        <input type="hidden" id="promoId">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-mobile-alt text-orange-500 mr-1"></i>WhatsApp client</label>
+          <input type="text" id="promoWhatsapp" required placeholder="Ex: 0700000000" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-percent text-orange-500 mr-1"></i>Réduction (%)</label>
+          <input type="number" id="promoDiscount" required min="1" max="100" value="10" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-calendar text-orange-500 mr-1"></i>Date d'expiration (optionnel)</label>
+          <input type="date" id="promoExpiry" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1"><i class="fas fa-code text-orange-500 mr-1"></i>Code personnalisé (optionnel)</label>
+          <input type="text" id="promoCustomCode" placeholder="Laissez vide pour générer automatiquement" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 outline-none uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-lg font-bold hover:from-orange-600 hover:to-orange-700 transition">
+          <i class="fas fa-save mr-2"></i>Enregistrer
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION STATISTIQUES -->
+<div id="sectionStats" class="hidden">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-chart-line text-orange-500 mr-2"></i>Statistiques de visites</h2>
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Filtre type véhicule -->
+        <select id="vehicleTypeFilter" onchange="applyStatsFilter()" class="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer shadow-sm">
+          <option value="all">🚗 Tous les véhicules</option>
+          <option value="location">🔑 Véhicules en Location</option>
+          <option value="vente">🏷️ Véhicules en Vente</option>
+        </select>
+        <!-- Filtre période -->
+        <div class="flex gap-2">
+          <button onclick="loadVisitStats(7)" class="px-4 py-2 bg-gray-200 hover:bg-orange-500 hover:text-white rounded-lg text-sm font-semibold transition">7 jours</button>
+          <button onclick="loadVisitStats(30)" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold">30 jours</button>
+          <button onclick="loadVisitStats(90)" class="px-4 py-2 bg-gray-200 hover:bg-orange-500 hover:text-white rounded-lg text-sm font-semibold transition">90 jours</button>
+        </div>
+      </div>
+    </div>
+    <div id="visitStatsContent"></div>
+  </div>
+</div>
+<!-- FIN SECTION STATISTIQUES -->
+
+
+<!-- MODAL VÉHICULE - Version Améliorée -->
+<div id="vehicleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50 backdrop-blur-sm" style="display: none;">
+  <div class="bg-white rounded-2xl max-w-3xl w-full transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] flex flex-col overflow-hidden" id="modalContent">
+    
+    <!-- Header Fixe -->
+    <div class="sticky top-0 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 pb-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+          <div class="bg-white/20 w-12 h-12 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <i class="fas fa-car text-white text-2xl"></i>
+          </div>
+          <h3 class="text-2xl font-black" id="modalTitle">Ajouter un véhicule</h3>
+        </div>
+        <button onclick="closeVehicleModal()" class="text-white/80 hover:text-white hover:rotate-90 transition-all duration-300">
+          <i class="fas fa-times text-2xl"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Contenu Scrollable -->
+    <div class="overflow-y-auto flex-1 p-6">
+      <form id="vehicleForm" class="space-y-4">
+        <input type="hidden" id="vehicleId">
+        
+        <!-- Informations de Base -->
+        <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+          <h4 class="text-sm font-bold text-orange-600 mb-3 flex items-center">
+            <i class="fas fa-info-circle mr-2"></i>
+            Informations de Base
+          </h4>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-car text-orange-500 mr-1"></i> Nom du véhicule
+              </label>
+              <input type="text" id="vehicleName" required placeholder="Ex: Toyota Corolla"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-tag text-orange-500 mr-1"></i> Catégorie
+              </label>
+              <select id="vehicleCategory" required
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition">
+                <option value="berline">Berline</option>
+                <option value="suv">SUV</option>
+                <option value="4x4">4x4</option>
+                <option value="pickup">Pick-up</option>
+                <option value="luxe">Luxe</option>
+                <option value="minibus">Minibus</option>
+                <option value="mariage">Véhicule de mariage</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Type de Véhicule -->
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border-2 border-blue-200">
+          <h4 class="text-sm font-bold text-blue-600 mb-3 flex items-center">
+            <i class="fas fa-exchange-alt mr-2"></i>
+            Type de Véhicule
+          </h4>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <i class="fas fa-list text-blue-500 mr-1"></i> Type
+            </label>
+            <select id="vehicleType" required onchange="toggleVehicleTypeFields()"
+              class="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+              <option value="">Sélectionnez un type</option>
+              <option value="location-avec">Location avec chauffeur</option>
+              <option value="location-sans">Location sans chauffeur</option>
+              <option value="vente">Vente</option>
+            </select>
+            <p class="text-xs text-gray-600 mt-1">Choisissez si ce véhicule est pour la location ou la vente</p>
+          </div>
+        </div>
+        
+        <!-- Prix Location (visible si type = location) -->
+        <div id="locationPriceSection" class="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+          <h4 class="text-sm font-bold text-green-600 mb-3 flex items-center">
+            <i class="fas fa-money-bill-wave mr-2"></i>
+            Prix de Location
+          </h4>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-coins text-green-500 mr-1"></i> Prix sans chauffeur (FCFA)
+              </label>
+              <input type="number" id="vehiclePriceWithout" placeholder="Ex: 35000"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-user-tie text-green-500 mr-1"></i> Prix avec chauffeur (FCFA)
+              </label>
+              <input type="number" id="vehiclePriceWith" placeholder="Ex: 55000"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Prix Vente (visible si type = vente) -->
+        <div id="salePriceSection" class="hidden bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
+          <h4 class="text-sm font-bold text-purple-600 mb-3 flex items-center">
+            <i class="fas fa-shopping-cart mr-2"></i>
+            Informations de Vente
+          </h4>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-dollar-sign text-purple-500 mr-1"></i> Prix de vente (FCFA)
+              </label>
+              <input type="number" id="vehicleSalePrice" placeholder="Ex: 15000000"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-calendar text-purple-500 mr-1"></i> Année
+              </label>
+              <input type="number" id="vehicleYear" placeholder="Ex: 2020" min="1990" max="2030"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+            </div>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-tachometer-alt text-purple-500 mr-1"></i> Kilométrage
+              </label>
+              <input type="text" id="vehicleMileage" placeholder="Ex: 45 000 km"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-gas-pump text-purple-500 mr-1"></i> Carburant
+              </label>
+              <select id="vehicleFuelType"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+                <option value="">Sélectionner</option>
+                <option value="Essence">Essence</option>
+                <option value="Diesel">Diesel</option>
+                <option value="Hybride">Hybride</option>
+                <option value="Électrique">Électrique</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-cog text-purple-500 mr-1"></i> Transmission
+              </label>
+              <select id="vehicleTransmission"
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+                <option value="">Sélectionner</option>
+                <option value="Automatique">Automatique</option>
+                <option value="Manuelle">Manuelle</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Gestion du Stock -->
+        <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-200">
+          <h4 class="text-sm font-bold text-yellow-600 mb-3 flex items-center">
+            <i class="fas fa-warehouse mr-2"></i>
+            Gestion du Stock
+          </h4>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-boxes text-yellow-500 mr-1"></i> Stock disponible
+              </label>
+              <input type="number" id="vehicleStock" min="0" step="1" value="3" required
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none transition">
+              <p class="text-xs text-gray-600 mt-1">Nombre de véhicules disponibles (0 = rupture de stock)</p>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i> Seuil d'alerte
+              </label>
+              <input type="number" id="vehicleStockAlert" min="0" value="1" required
+                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none transition">
+              <p class="text-xs text-gray-600 mt-1">Alerte quand le stock atteint ce niveau</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Destination -->
+        <div class="bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
+          <h4 class="text-sm font-bold text-purple-600 mb-3 flex items-center">
+            <i class="fas fa-map-marker-alt mr-2"></i>
+            DESTINATION
+          </h4>
+          <p class="text-xs text-gray-600 mb-3">Sélectionnez les destinations disponibles pour ce véhicule</p>
+          <div class="space-y-3">
+            <label class="flex items-center space-x-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-purple-400 cursor-pointer transition">
+              <input type="checkbox" id="destAbidjan" class="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+              <div class="flex-1">
+                <span class="font-semibold text-gray-800">Abidjan avec chauffeur</span>
+                <p class="text-xs text-gray-500">Disponible pour les locations à Abidjan</p>
+              </div>
+            </label>
+
+            <label class="flex items-center space-x-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-purple-400 cursor-pointer transition">
+              <input type="checkbox" id="authAbidjan" class="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+              <div class="flex-1">
+                <span class="font-semibold text-gray-800">Abidjan sans chauffeur</span>
+                <p class="text-xs text-gray-500">Disponible pour les locations à Abidjan sans chauffeur</p>
+              </div>
+            </label>
+
+            <label class="flex items-center space-x-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-purple-400 cursor-pointer transition">
+              <input type="checkbox" id="destInterieur" class="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+              <div class="flex-1">
+                <span class="font-semibold text-gray-800">Intérieur avec chauffeur</span>
+                <p class="text-xs text-gray-500">Disponible pour les locations à l'intérieur du pays</p>
+              </div>
+            </label>
+
+            <label class="flex items-center space-x-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-purple-400 cursor-pointer transition">
+              <input type="checkbox" id="authHorsAbidjan" class="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+              <div class="flex-1">
+                <span class="font-semibold text-gray-800">Intérieur sans chauffeur</span>
+                <p class="text-xs text-gray-500">Disponible pour les locations à l'intérieur du pays sans chauffeur</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Autorisations sans chauffeur (masqué — géré dans DESTINATION) -->
+        <div id="driverAuthSection" class="hidden"></div>
+        
+        <!-- Image -->
+        <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+          <h4 class="text-sm font-bold text-orange-600 mb-3 flex items-center">
+            <i class="fas fa-image mr-2"></i>
+            Image du Véhicule
+          </h4>
+          <!-- Onglets source image -->
+          <div class="flex gap-2 mb-3">
+            <button type="button" id="tabUpload" onclick="switchImageTab('upload')"
+              class="flex-1 py-2 px-3 rounded-lg text-sm font-semibold bg-orange-500 text-white transition">
+              <i class="fas fa-upload mr-1"></i> Uploader
+            </button>
+            <button type="button" id="tabBiblio" onclick="switchImageTab('biblio')"
+              class="flex-1 py-2 px-3 rounded-lg text-sm font-semibold bg-gray-200 text-gray-700 transition">
+              <i class="fas fa-folder-open mr-1"></i> Bibliothèque
+            </button>
+          </div>
+
+          <!-- Panneau upload -->
+          <div id="panelUpload">
+            <input type="file" id="vehicleImage" accept="image/*" multiple
+              class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-orange-500 file:text-white file:font-semibold hover:file:bg-orange-600">
+            <p class="text-xs text-gray-600 mt-1">JPG, PNG, WEBP — Max 10MB — Sélection multiple possible (jusqu'à 50 images)</p>
+          </div>
+
+          <!-- Panneau bibliothèque -->
+          <div id="panelBiblio" class="hidden">
+            <select id="voitureFolder" onchange="loadFolderImages()"
+              class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition mb-3">
+              <option value="">-- Choisir un dossier --</option>
+            </select>
+            <div id="folderImagesGrid" class="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto"></div>
+            <p id="folderImagesHint" class="text-xs text-gray-500 mt-1">Cliquez sur les images pour les sélectionner (la première = image principale)</p>
+          </div>
+
+          <input type="hidden" id="vehicleImageUrl">
+          <input type="hidden" id="vehicleExistingImages">
+          <input type="hidden" id="biblioSelectedImages">
+        </div>
+        
+        <!-- Caractéristiques -->
+        <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+          <h4 class="text-sm font-bold text-orange-600 mb-3 flex items-center">
+            <i class="fas fa-list-ul mr-2"></i>
+            Caractéristiques
+          </h4>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <i class="fas fa-check-circle text-orange-500 mr-1"></i> Caractéristiques (séparées par des virgules)
+            </label>
+            <input type="text" id="vehicleFeatures" placeholder="Climatisation, GPS, 5 places" required
+              class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition">
+            <p class="text-xs text-gray-600 mt-1">Exemple: Climatisation, GPS, Bluetooth, Cuir, 5 places</p>
+          </div>
+        </div>
+        
+        <!-- Description -->
+        <div class="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+          <h4 class="text-sm font-bold text-orange-600 mb-3 flex items-center">
+            <i class="fas fa-align-left mr-2"></i>
+            Description Détaillée
+          </h4>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <i class="fas fa-file-alt text-orange-500 mr-1"></i> Description
+            </label>
+            <textarea id="vehicleDescription" rows="4" placeholder="Décrivez le véhicule en détail (confort, performance, équipements spéciaux, etc.)" required
+              class="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition resize-none"></textarea>
+            <p class="text-xs text-gray-600 mt-1">Cette description sera affichée dans le modal "Voir détails" sur le site</p>
+          </div>
+        </div>
+        
+      </form>
+    </div>
+    
+    <!-- Footer Fixe avec Boutons -->
+    <div class="sticky bottom-0 z-10 bg-white border-t-2 border-gray-200 p-6 pt-4">
+      <div class="flex space-x-4">
+        <button type="submit" form="vehicleForm"
+          class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all font-black text-lg shadow-lg hover:shadow-orange-500/50 transform hover:scale-105 duration-300">
+          <i class="fas fa-save mr-2"></i>Enregistrer
+        </button>
+        <button type="button" onclick="closeVehicleModal()"
+          class="px-8 bg-gray-200 text-gray-700 py-4 rounded-xl hover:bg-gray-300 transition-all font-bold">
+          <i class="fas fa-times mr-2"></i>Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LISTE DES CLIENTS -->
+<div id="clientsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fas fa-users text-3xl"></i>
+        <div>
+          <h2 class="text-2xl font-bold">Liste des clients</h2>
+          <p class="text-sm text-blue-100">Tous les clients ayant effectué une réservation</p>
+        </div>
+      </div>
+      <button onclick="closeClientsModal()" class="text-white hover:bg-white/20 p-2 rounded-lg transition">
+        <i class="fas fa-times text-2xl"></i>
+      </button>
+    </div>
+    
+    <!-- Contenu -->
+    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <div id="clientsList" class="space-y-4">
+        <!-- Les clients seront ajoutés ici dynamiquement -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+  <script src="admin.js"></script>
+
+<style>
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slideDown {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Effet de brillance sur les cartes */
+.shine-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.shine-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.shine-effect:hover::before {
+    left: 100%;
+}
+</style>
+
+</body>
+</html>
