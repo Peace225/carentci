@@ -43,12 +43,21 @@ export default function ReservationModal({ vehicle, onClose }) {
     }
   }, [form.driverType, form.locationType, vehicle])
 
-  const basePricePerDay = form.locationType === "avec" ? vehicle.priceWith : vehicle.priceWithout
+  // Utilisation de vehicle.prix si priceWith/Without ne sont pas encore définis
+  const basePricePerDay = form.locationType === "avec" 
+    ? (vehicle.priceWith || (vehicle.prix + 10000)) 
+    : (vehicle.priceWithout || vehicle.prix)
+
   const driverFeeTotal = form.driverType === "with" ? DRIVER_FEE_PER_DAY * days : 0
   const pricePerDay = basePricePerDay + (form.driverType === "with" ? DRIVER_FEE_PER_DAY : 0)
   const discount = days >= 2 ? getDiscount(days) : 0
   const caution = form.driverType === "without" ? (form.locationType === "avec" ? 15000 : 10000) : 0
-  const subtotal = days >= 2 ? (pricePerDay * days * form.quantity) - (discount * form.quantity) + DELIVERY_FEE + caution : 0
+  
+  // Correction de la logique de calcul du sous-total
+  const subtotal = days >= 2 
+    ? ((pricePerDay * days) - (discount * days)) * form.quantity + DELIVERY_FEE + caution 
+    : 0
+
   const promoDiscount = promoResult ? Math.round(subtotal * promoResult.discount_percentage / 100) : 0
   const total = subtotal - promoDiscount
 
@@ -90,11 +99,12 @@ export default function ReservationModal({ vehicle, onClose }) {
         const driverLabel = form.driverType === "with" ? "Avec chauffeur" : "Sans chauffeur"
         let priceDetails = "*MONTANT:* " + formatPrice(basePricePerDay * days * form.quantity)
         if (driverFeeTotal > 0) priceDetails += "\n*CHAUFFEUR:* " + formatPrice(driverFeeTotal)
-        if (discount > 0) priceDetails += "\n*REMISE:* -" + formatPrice(discount * form.quantity)
+        if (discount > 0) priceDetails += "\n*REMISE:* -" + formatPrice(discount * days * form.quantity)
         priceDetails += "\n*Livraison:* " + formatPrice(DELIVERY_FEE)
         if (caution > 0) priceDetails += "\n*Caution:* " + formatPrice(caution)
         if (promoDiscount > 0) priceDetails += "\n*Promo (" + promoResult.discount_percentage + "%):* -" + formatPrice(promoDiscount)
-        const adminMsg = "*NOUVELLE RESERVATION " + res.data.id + "*\n\n*Client:* " + form.clientName + "\n*WhatsApp:* " + form.clientWhatsapp + "\n\n*Vehicule:* " + vehicle.name + "\n\n*Voir:*\n" + vehicleUrl + "\n\n*Du:* " + formatDate(form.startDate) + " à " + form.startTime + "\n*Au:* " + formatDate(form.endDate) + " à " + form.endTime + "\n*Duree:* " + days + " jour" + (days > 1 ? "s" : "") + "\n\n*" + priceLabel + "*\n*Type:* " + driverLabel + "\n*Destination:* " + (form.destination || "Non precisee") + "\n*Livraison:* " + form.pickupLocation + "\n\n" + priceDetails + "\n\n*TOTAL:* " + formatPrice(total) + "\n\n_www.carentci.com_"
+        
+        const adminMsg = "*NOUVELLE RESERVATION " + res.data.id + "*\n\n*Client:* " + form.clientName + "\n*WhatsApp:* " + form.clientWhatsapp + "\n\n*Vehicule:* " + vehicle.marque + " " + vehicle.modele + "\n\n*Voir:*\n" + vehicleUrl + "\n\n*Du:* " + formatDate(form.startDate) + " à " + form.startTime + "\n*Au:* " + formatDate(form.endDate) + " à " + form.endTime + "\n*Duree:* " + days + " jour" + (days > 1 ? "s" : "") + "\n\n*" + priceLabel + "*\n*Type:* " + driverLabel + "\n*Destination:* " + (form.destination || "Non precisee") + "\n*Livraison:* " + form.pickupLocation + "\n\n" + priceDetails + "\n\n*TOTAL:* " + formatPrice(total) + "\n\n_www.carentci.com_"
         window.open("https://wa.me/2250779562825?text=" + encodeURIComponent(adminMsg), "_blank")
         onClose()
       } else { alert("Erreur : " + res.message) }
@@ -113,7 +123,7 @@ export default function ReservationModal({ vehicle, onClose }) {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base md:text-xl font-bold text-white tracking-wide truncate">Réservation</h3>
-            <p className="text-orange-500 font-semibold text-[10px] md:text-xs uppercase tracking-widest truncate">{vehicle.name}</p>
+            <p className="text-orange-500 font-semibold text-[10px] md:text-xs uppercase tracking-widest truncate">{vehicle.marque} {vehicle.modele}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0">
             <i className="fas fa-times text-sm md:text-base" />
@@ -242,7 +252,7 @@ export default function ReservationModal({ vehicle, onClose }) {
               {promoError && <p className="text-red-400 text-[10px] mt-2 text-center">{promoError}</p>}
             </div>
 
-            {/* Conditions Générales (Rétractables / Scrollables) */}
+            {/* Conditions Générales */}
             {form.driverType && (
               <div className="bg-black/50 rounded-2xl border border-white/5 overflow-hidden">
                 <div className="flex items-center gap-2.5 px-4 md:px-5 py-3 md:py-4 bg-white/[0.02] border-b border-white/5">
@@ -263,7 +273,8 @@ export default function ReservationModal({ vehicle, onClose }) {
                     </ul>
                   ) : (
                     <ul className="space-y-2">
-                      <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Exigence d'un permis valide (> 2 ans d'ancienneté) et âge minimal de 21 ans.</li>
+                      {/* FIX: Symbol '>' escaped correctly for JSX */}
+                      <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Exigence d'un permis valide ({">"} 2 ans d'ancienneté) et âge minimal de 21 ans.</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Dépôt de garantie exigé à la remise des clés (10k-15k FCFA selon zone).</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Minimum de facturation fixé à 2 jours pleins.</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Responsabilité pleine et entière sur la mécanique et la carrosserie.</li>
