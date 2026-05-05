@@ -56,36 +56,35 @@ class Vehicle {
         }
     }
     
-    // Créer un nouveau véhicule
+    // ==========================================
+    // CRÉER UN NOUVEAU VÉHICULE (Corrigé avec les bonnes colonnes)
+    // ==========================================
     static async create(vehicleData) {
         try {
+            // On récupère les variables exactes envoyées par React et le Controller
             const { 
-                name, category, type, 
-                price_without_driver, price_with_driver, 
-                sale_price, year, mileage, fuel_type, transmission,
-                features, image_url, images, stock, stock_alert_threshold, description,
-                autorise_sans_chauffeur_abidjan, autorise_sans_chauffeur_hors_abidjan
+                marque, modele, annee, category, transmission, 
+                carburant, kilometrage, prix, sale_price, type, images 
             } = vehicleData;
             
             const [result] = await db.query(
                 `INSERT INTO vehicles (
-                    name, category, type, 
-                    price_without_driver, price_with_driver, 
-                    sale_price, year, mileage, fuel_type, transmission,
-                    features, image_url, images, stock, stock_alert_threshold, description,
-                    autorise_sans_chauffeur_abidjan, autorise_sans_chauffeur_hors_abidjan
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    marque, modele, annee, category, transmission, 
+                    carburant, kilometrage, prix, sale_price, type, 
+                    images, is_active, is_sold
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)`,
                 [
-                    name, category, type || 'location',
-                    price_without_driver || null, price_with_driver || null,
-                    sale_price || null, year || null, mileage || null, fuel_type || null, transmission || null,
-                    JSON.stringify(features || []), image_url,
-                    images ? JSON.stringify(images) : null,
-                    stock !== undefined && stock !== null ? stock : 3,
-                    stock_alert_threshold !== undefined && stock_alert_threshold !== null ? stock_alert_threshold : 1,
-                    description || '',
-                    autorise_sans_chauffeur_abidjan !== undefined ? autorise_sans_chauffeur_abidjan : 1,
-                    autorise_sans_chauffeur_hors_abidjan !== undefined ? autorise_sans_chauffeur_hors_abidjan : 1
+                    marque, 
+                    modele, 
+                    annee || null, 
+                    category || 'suv', 
+                    transmission || null, 
+                    carburant || null, 
+                    kilometrage || 0, 
+                    prix || 0, 
+                    sale_price || 0, 
+                    type || 'location', 
+                    images // Déjà transformé en JSON.stringify dans le controller
                 ]
             );
             
@@ -94,42 +93,38 @@ class Vehicle {
             throw error;
         }
     }
-    // Mettre à jour un véhicule
-    // Mettre à jour un véhicule
+
+    // ==========================================
+    // METTRE À JOUR UN VÉHICULE (Corrigé avec les bonnes colonnes)
+    // ==========================================
     static async update(id, vehicleData) {
         try {
             const { 
-                name, category, type,
-                price_without_driver, price_with_driver, 
-                sale_price, year, mileage, fuel_type, transmission,
-                features, image_url, images, is_active, stock, stock_alert_threshold, description,
-                autorise_sans_chauffeur_abidjan, autorise_sans_chauffeur_hors_abidjan
+                marque, modele, annee, category, transmission, 
+                carburant, kilometrage, prix, sale_price, type, images, is_active 
             } = vehicleData;
             
-            const [result] = await db.query(
-                `UPDATE vehicles 
-                 SET name = ?, category = ?, type = ?,
-                     price_without_driver = ?, price_with_driver = ?, 
-                     sale_price = ?, year = ?, mileage = ?, fuel_type = ?, transmission = ?,
-                     features = ?, image_url = ?, images = ?, is_active = ?, 
-                     stock = ?, stock_alert_threshold = ?, description = ?,
-                     autorise_sans_chauffeur_abidjan = ?, autorise_sans_chauffeur_hors_abidjan = ?
-                 WHERE id = ?`,
-                [
-                    name, category, type || 'location',
-                    price_without_driver || null, price_with_driver || null,
-                    sale_price || null, year || null, mileage || null, fuel_type || null, transmission || null,
-                    JSON.stringify(features || []), image_url,
-                    images ? JSON.stringify(images) : null,
-                    is_active,
-                    stock !== undefined && stock !== null ? stock : 3,
-                    stock_alert_threshold !== undefined && stock_alert_threshold !== null ? stock_alert_threshold : 1,
-                    description || '',
-                    autorise_sans_chauffeur_abidjan !== undefined ? autorise_sans_chauffeur_abidjan : 1,
-                    autorise_sans_chauffeur_hors_abidjan !== undefined ? autorise_sans_chauffeur_hors_abidjan : 1,
-                    id
-                ]
-            );
+            // Si de nouvelles images sont fournies, on met à jour la colonne, sinon on garde les anciennes
+            let query = `UPDATE vehicles SET 
+                         marque = ?, modele = ?, annee = ?, category = ?, 
+                         transmission = ?, carburant = ?, kilometrage = ?, 
+                         prix = ?, sale_price = ?, type = ?, is_active = ?`;
+            
+            let values = [
+                marque, modele, annee, category, transmission, 
+                carburant, kilometrage, prix, sale_price, type, 
+                is_active !== undefined ? is_active : 1
+            ];
+
+            if (images) {
+                query += `, images = ?`;
+                values.push(images);
+            }
+
+            query += ` WHERE id = ?`;
+            values.push(id);
+
+            const [result] = await db.query(query, values);
             
             return result.affectedRows > 0;
         } catch (error) {
@@ -171,7 +166,7 @@ class Vehicle {
         }
     }
     
-    // Mettre à jour le stock d'un véhicule
+    // Mettre à jour le stock (si vous avez gardé la colonne stock)
     static async updateStock(id, stock) {
         try {
             const [result] = await db.query(

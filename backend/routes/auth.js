@@ -39,33 +39,33 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Connexion
+// Connexion (CORRIGÉ : Utilise l'email au lieu du username)
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { email, password } = req.body;
 
-        // Chercher par nom d'utilisateur
-        const user = await User.findByName(username);
+        // 1. Chercher l'utilisateur par son email
+        const user = await User.findByEmail(email);
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: 'Nom d\'utilisateur ou mot de passe incorrect'
+                message: 'Email ou mot de passe incorrect'
             });
         }
 
-        // Vérifier le mot de passe
+        // 2. Vérifier le mot de passe
         const isValidPassword = await User.verifyPassword(password, user.password);
         if (!isValidPassword) {
             return res.status(401).json({
                 success: false,
-                message: 'Nom d\'utilisateur ou mot de passe incorrect'
+                message: 'Email ou mot de passe incorrect'
             });
         }
 
-        // Générer le token JWT
+        // 3. Générer le token JWT avec une clé de secours au cas où le .env n'est pas chargé
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET || 'cle_secrete_de_secours_au_cas_ou',
             { expiresIn: '7d' }
         );
 
@@ -105,7 +105,7 @@ const authMiddleware = async (req, res, next) => {
             });
         }
         
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cle_secrete_de_secours_au_cas_ou');
         req.user = decoded;
         next();
         

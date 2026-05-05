@@ -1,58 +1,116 @@
-import { useState } from 'react'
-import SaleVehicleModal from './SaleVehicleModal'
-import { trackVisit } from '../api/config'
+import { useState } from "react"
+import { Link } from "react-router-dom"
 
 export default function SaleVehicleCard({ vehicle }) {
-  const [showModal, setShowModal] = useState(false)
-  const { name, category, image, price, year, mileage, features } = vehicle
-
-  function handleContact() {
-    trackVisit('index', vehicle.id, vehicle.name, 'vente')
-    const url = `${window.location.origin}/v/${vehicle.id}`
-    const msg = `Bonjour, je suis intéressé par l'achat de ce véhicule:\n\n*${name}*\n*Prix:* ${price?.toLocaleString('fr-FR')} FCFA\n*Année:* ${year}\n*Kilométrage:* ${mileage}\n\n*Voir le véhicule:*\n${url}\n\nPouvez-vous me donner plus d'informations?`
-    window.open(`https://wa.me/2250779562825?text=${encodeURIComponent(msg)}`, '_blank')
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  
+  // LOGIQUE MERN : Gestion du format JSON (MySQL) ou Array (MongoDB)
+  const getImages = () => {
+    try {
+      if (Array.isArray(vehicle?.images)) return vehicle.images
+      if (typeof vehicle?.images === 'string') return JSON.parse(vehicle.images)
+    } catch (e) {
+      console.error("Erreur parsing images vente", e)
+    }
+    return vehicle?.image ? [vehicle.image] : ["/placeholder-car.jpg"]
   }
 
-  return (
-    <>
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-lg hover:scale-105 transition-all duration-300 border border-orange-500/20 hover:border-orange-500 animate-fadeInUp">
-        <div className="relative overflow-hidden group">
-          <img src={image} alt={name} className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500" />
-          <div className="absolute top-4 right-4 bg-orange-500 px-3 py-1 rounded-full text-sm font-bold uppercase">{category}</div>
-          <div className="absolute top-4 left-4 bg-green-500 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-            <i className="fas fa-tag" />À VENDRE
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-            <p className="text-white font-bold text-xl">{price?.toLocaleString('fr-FR')} FCFA</p>
-          </div>
-        </div>
+  const images = getImages()
 
-        <div className="p-5">
-          <h4 className="text-xl font-bold mb-2">{name}</h4>
-          <div className="grid grid-cols-2 gap-2 mb-3 text-sm text-gray-400">
-            <span><i className="fas fa-calendar text-orange-500 mr-1" />{year}</span>
-            <span><i className="fas fa-tachometer-alt text-orange-500 mr-1" />{mileage} km</span>
-          </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {features.slice(0, 3).map((f, i) => (
-              <span key={i} className="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs">
-                <i className="fas fa-check mr-1" />{f}
-              </span>
-            ))}
-            {features.length > 3 && <span className="bg-gray-700 text-gray-300 px-2 py-1 rounded-full text-xs">+{features.length - 3}</span>}
-          </div>
-          <div className="space-y-2">
-            <button onClick={handleContact} className="w-full bg-gradient-to-r from-green-500 to-green-600 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-semibold flex items-center justify-center gap-2">
-              <i className="fab fa-whatsapp text-lg" />Contacter pour acheter
+  // Navigation Carrousel
+  const nextImage = (e) => {
+    e.preventDefault(); e.stopPropagation()
+    setCurrentImageIndex((prev) => (prev + 1) % images.length)
+  }
+
+  const prevImage = (e) => {
+    e.preventDefault(); e.stopPropagation()
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
+  }
+
+  const displayKm = (vehicle?.kilometrage || 0).toLocaleString('fr-FR')
+  const displayPrice = (vehicle?.prix || vehicle?.sale_price || 0).toLocaleString('fr-FR')
+
+  return (
+    <div className="relative group bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden hover:bg-white/[0.04] hover:border-blue-500/30 transition-all duration-500 flex flex-col shadow-2xl">
+      
+      {/* --- CARROUSEL D'IMAGES --- */}
+      <div className="relative w-full h-64 overflow-hidden bg-[#0a0a0a]">
+        <img 
+          src={images[currentImageIndex]} 
+          alt={`${vehicle?.marque} ${vehicle?.modele}`} 
+          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+        />
+        
+        {/* Overlay pour le contraste */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+
+        {images.length > 1 && (
+          <>
+            <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 z-10 border border-white/10">
+              <i className="fas fa-chevron-left text-xs"></i>
             </button>
-            <button onClick={() => { trackVisit('index', vehicle.id, vehicle.name, 'vente'); setShowModal(true) }} className="w-full bg-gradient-to-r from-orange-500 to-orange-600 py-2 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all text-sm font-semibold">
-              <i className="fas fa-info-circle mr-1" />Voir détails
+            <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 z-10 border border-white/10">
+              <i className="fas fa-chevron-right text-xs"></i>
             </button>
-          </div>
+          </>
+        )}
+
+        {/* Badge Vente Premium */}
+        <div className="absolute top-5 left-5 z-20">
+          <span className="bg-blue-600 text-white text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-[0.2em] shadow-lg flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+            Disponible à la vente
+          </span>
         </div>
       </div>
 
-      {showModal && <SaleVehicleModal vehicle={vehicle} onClose={() => setShowModal(false)} />}
-    </>
+      {/* --- INFOS VÉHICULE --- */}
+      <div className="p-7 flex-1 flex flex-col">
+        <div className="mb-4">
+          <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">
+            {vehicle?.marque} <span className="text-blue-500">{vehicle?.modele}</span>
+          </h3>
+          <div className="flex items-center gap-2 mt-1">
+            <i className="fas fa-shield-alt text-blue-500 text-[10px]"></i>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Certification Prestige</p>
+          </div>
+        </div>
+        
+        {/* Specs techniques */}
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          <div className="bg-white/[0.03] border border-white/5 p-3 rounded-2xl">
+            <p className="text-[8px] text-gray-500 font-black uppercase mb-1">État Moteur</p>
+            <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+              <i className="fas fa-gas-pump text-blue-500 mr-2"></i>{vehicle?.carburant}
+            </span>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 p-3 rounded-2xl">
+            <p className="text-[8px] text-gray-500 font-black uppercase mb-1">Kilométrage</p>
+            <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+              <i className="fas fa-tachometer-alt text-blue-500 mr-2"></i>{displayKm} KM
+            </span>
+          </div>
+        </div>
+
+        {/* --- PRIX ET ACTION --- */}
+        <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+          <div>
+            <p className="text-[9px] text-blue-500 font-black uppercase tracking-[0.2em] mb-1">Prix de cession</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-black text-white tracking-tighter">{displayPrice}</span>
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">FCFA</span>
+            </div>
+          </div>
+
+          <Link 
+            to={`/vehicule/${vehicle?.id}`}
+            className="w-14 h-14 bg-white hover:bg-blue-600 text-black hover:text-white rounded-2xl flex items-center justify-center transition-all duration-500 shadow-xl"
+          >
+            <i className="fas fa-shopping-bag text-lg"></i>
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 }

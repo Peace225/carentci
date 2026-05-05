@@ -28,7 +28,7 @@ export default function Navbar() {
               <i className="fas fa-home mr-2 text-orange-500" />Accueil
             </Link>
 
-            {/* Dropdown Véhicules corrigé */}
+            {/* Dropdown Véhicules */}
             <div 
               className="relative group" 
               onMouseEnter={() => setVehiclesOpen(true)} 
@@ -87,8 +87,11 @@ export default function Navbar() {
             </Link>
           </nav>
 
-          {/* Actions (Panier, Tél, Menu Mobile) */}
+          {/* Actions (Login Admin, Panier, Tél, Menu Mobile) */}
           <div className="flex items-center gap-3 flex-shrink-0">
+            
+           
+
             <a href="tel:+2250779562825" className="hidden xl:flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl transition-all whitespace-nowrap">
               <i className="fas fa-phone-alt text-orange-500 text-xs" />
               <span className="font-bold text-white text-xs tracking-widest">07 79 56 28 25</span>
@@ -107,6 +110,14 @@ export default function Navbar() {
                 </span>
               )}
             </button>
+             {/* ACCÈS ADMIN DESKTOP */}
+            <Link 
+              to="/admin/login" 
+              title="Accès Administrateur"
+              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-orange-500 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all duration-300"
+            >
+              <i className="fas fa-user-shield text-xs" />
+            </Link>
 
             {/* Hamburger Button Mobile */}
             <button className="lg:hidden w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/10 transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
@@ -143,6 +154,13 @@ export default function Navbar() {
             </Link>
             <Link to="/mes-reservations" onClick={() => setMenuOpen(false)} className="px-4 py-3.5 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all flex items-center font-bold uppercase tracking-widest text-xs">
               <i className="fas fa-folder-open mr-4 text-orange-500 w-4 text-center" />Mes Dossiers
+            </Link>
+
+            <div className="my-2 border-t border-white/5"></div>
+
+            {/* ACCÈS ADMIN MOBILE */}
+            <Link to="/admin/login" onClick={() => setMenuOpen(false)} className="px-4 py-3.5 rounded-xl hover:bg-orange-500/10 text-orange-500 transition-all flex items-center font-bold uppercase tracking-widest text-xs border border-orange-500/20">
+              <i className="fas fa-user-shield mr-4 w-4 text-center" />Administration
             </Link>
           </nav>
         </div>
