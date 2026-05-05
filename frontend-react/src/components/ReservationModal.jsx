@@ -263,6 +263,7 @@ export default function ReservationModal({ vehicle, onClose }) {
                     </ul>
                   ) : (
                     <ul className="space-y-2">
+                      {/* C'est ICI que la correction est appliquée : {">"} au lieu de > */}
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Exigence d'un permis valide ({">"} 2 ans d'ancienneté) et âge minimal de 21 ans.</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Dépôt de garantie exigé à la remise des clés (10k-15k FCFA selon zone).</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Minimum de facturation fixé à 2 jours pleins.</li>
