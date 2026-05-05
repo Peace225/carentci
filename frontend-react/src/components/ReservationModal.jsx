@@ -43,7 +43,6 @@ export default function ReservationModal({ vehicle, onClose }) {
     }
   }, [form.driverType, form.locationType, vehicle])
 
-  // Utilisation de vehicle.prix si priceWith/Without ne sont pas encore définis
   const basePricePerDay = form.locationType === "avec" 
     ? (vehicle.priceWith || (vehicle.prix + 10000)) 
     : (vehicle.priceWithout || vehicle.prix)
@@ -53,7 +52,6 @@ export default function ReservationModal({ vehicle, onClose }) {
   const discount = days >= 2 ? getDiscount(days) : 0
   const caution = form.driverType === "without" ? (form.locationType === "avec" ? 15000 : 10000) : 0
   
-  // Correction de la logique de calcul du sous-total
   const subtotal = days >= 2 
     ? ((pricePerDay * days) - (discount * days)) * form.quantity + DELIVERY_FEE + caution 
     : 0
@@ -116,7 +114,6 @@ export default function ReservationModal({ vehicle, onClose }) {
     <div className="fixed inset-0 bg-[#050505]/90 backdrop-blur-md z-50 flex items-center justify-center p-3 md:p-6" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-[#0a0a0a] rounded-[1.5rem] md:rounded-[2rem] max-w-3xl w-full border border-white/10 relative max-h-[90vh] md:max-h-[95vh] flex flex-col overflow-hidden shadow-2xl">
         
-        {/* Header Modal */}
         <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-white/5 p-4 md:p-6 flex items-center gap-4">
           <div className="bg-white/5 border border-white/10 w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center flex-shrink-0">
             <i className="fas fa-car text-orange-500 text-xl md:text-2xl" />
@@ -130,11 +127,9 @@ export default function ReservationModal({ vehicle, onClose }) {
           </button>
         </div>
 
-        {/* Corps Scrollable */}
         <div className="overflow-y-auto flex-1 p-4 md:p-6 custom-scrollbar">
           <form id="resForm" onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
             
-            {/* Infos Client */}
             <div className="bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5">
               <h4 className="text-[10px] md:text-xs font-bold text-orange-500 mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
                 <i className="fas fa-user-circle text-sm" /> Informations Client
@@ -147,7 +142,6 @@ export default function ReservationModal({ vehicle, onClose }) {
               </div>
             </div>
 
-            {/* Dates */}
             <div className="bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5">
               <h4 className="text-[10px] md:text-xs font-bold text-orange-500 mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
                 <i className="fas fa-calendar-alt text-sm" /> Période de Location
@@ -178,7 +172,6 @@ export default function ReservationModal({ vehicle, onClose }) {
               {days >= 2 && <div className="mt-3 text-right"><span className="inline-block bg-white/5 border border-white/10 px-3 py-1 rounded-full text-white text-[10px] font-bold uppercase tracking-widest">{days} Jours validés</span></div>}
             </div>
 
-            {/* Configuration */}
             <div className="bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5">
               <h4 className="text-[10px] md:text-xs font-bold text-orange-500 mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
                 <i className="fas fa-cog text-sm" /> Paramètres
@@ -219,7 +212,6 @@ export default function ReservationModal({ vehicle, onClose }) {
               {form.driverType === "without" && <div className="mt-3 p-3 bg-white/5 border border-white/10 rounded-xl"><p className="text-gray-300 text-[11px]"><i className="fas fa-shield-alt text-orange-500 mr-1.5" /> Caution de garantie : <span className="font-bold text-white">{formatPrice(caution)}</span> (Restituée en fin de séjour)</p></div>}
             </div>
 
-            {/* Logistique */}
             <div className="bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5">
               <h4 className="text-[10px] md:text-xs font-bold text-orange-500 mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
                 <i className="fas fa-map-pin text-sm" /> Logistique
@@ -235,7 +227,6 @@ export default function ReservationModal({ vehicle, onClose }) {
                 className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 focus:border-orange-500 outline-none text-white text-xs md:text-sm transition-colors resize-none custom-scrollbar" />
             </div>
 
-            {/* Code Promo */}
             <div className="bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5">
               <h4 className="text-[10px] md:text-xs font-bold text-orange-500 mb-3 md:mb-4 uppercase tracking-widest flex items-center gap-2">
                 <i className="fas fa-ticket-alt text-sm" /> Avantage Privilège
@@ -252,7 +243,6 @@ export default function ReservationModal({ vehicle, onClose }) {
               {promoError && <p className="text-red-400 text-[10px] mt-2 text-center">{promoError}</p>}
             </div>
 
-            {/* Conditions Générales */}
             {form.driverType && (
               <div className="bg-black/50 rounded-2xl border border-white/5 overflow-hidden">
                 <div className="flex items-center gap-2.5 px-4 md:px-5 py-3 md:py-4 bg-white/[0.02] border-b border-white/5">
@@ -273,7 +263,6 @@ export default function ReservationModal({ vehicle, onClose }) {
                     </ul>
                   ) : (
                     <ul className="space-y-2">
-                      {/* FIX: Symbol '>' escaped correctly for JSX */}
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Exigence d'un permis valide ({">"} 2 ans d'ancienneté) et âge minimal de 21 ans.</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Dépôt de garantie exigé à la remise des clés (10k-15k FCFA selon zone).</li>
                       <li className="flex gap-2"><i className="fas fa-angle-right text-orange-500 mt-0.5 flex-shrink-0" />Minimum de facturation fixé à 2 jours pleins.</li>
@@ -287,7 +276,6 @@ export default function ReservationModal({ vehicle, onClose }) {
               </div>
             )}
 
-            {/* Acceptation */}
             <label className="flex items-start gap-3 md:gap-4 cursor-pointer bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5 hover:border-orange-500/30 transition-colors">
               <div className="relative flex-shrink-0 mt-0.5 md:mt-1">
                 <input type="checkbox" checked={conditionsAccepted} onChange={e => setConditionsAccepted(e.target.checked)} className="sr-only" />
@@ -303,7 +291,6 @@ export default function ReservationModal({ vehicle, onClose }) {
           </form>
         </div>
 
-        {/* Footer Fixe */}
         <div className="sticky bottom-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-white/5 p-4 md:p-6">
           {days >= 2 && (
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4 md:mb-5">
