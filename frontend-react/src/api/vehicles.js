@@ -24,7 +24,7 @@ const formatImageUrl = (url) => {
  * Parseur universel pour le champ images (gère JSON string ou Array).
  */
 const parseVehicleImages = (v) => {
-  const rawImages = v.Images || v.images;
+  const rawImages = v.Images || v.images || v.IMAGES;
   let parsed = [];
   try {
     parsed = typeof rawImages === 'string' ? JSON.parse(rawImages) : (Array.isArray(rawImages) ? rawImages : []);
@@ -45,23 +45,23 @@ export async function fetchRentalVehicles() {
   
   // Filtre is_active !== 0 pour masquer les véhicules archivés (Soft Delete)
   return data.data
-    .filter(v => v.is_active !== 0)
+    .filter(v => (v.is_active ?? v.Is_active ?? v.IS_ACTIVE) !== 0)
     .map(v => {
       const formattedImages = parseVehicleImages(v);
       return {
-        id: v.id,
-        marque: v.marque,
-        modele: v.modele,
-        category: v.category,
-        annee: v.annee,
-        carburant: v.carburant,
-        transmission: v.transmission,
-        prix: v.prix,
-        type: v.type,
+        id: v.id || v.Id || v.ID,
+        marque: v.marque || v.Marque || v.MARQUE,
+        modele: v.modele || v.Modele || v.MODELE,
+        category: v.category || v.Category || v.CATEGORY || v.categorie || v.Categorie,
+        annee: v.annee || v.Annee || v.ANNEE,
+        carburant: v.carburant || v.Carburant || v.CARBURANT,
+        transmission: v.transmission || v.Transmission || v.TRANSMISSION,
+        prix: v.prix || v.Prix || v.PRIX,
+        type: v.type || v.Type || v.TYPE,
         image: formattedImages[0] || null,
         images: formattedImages,
-        kilometrage: v.kilometrage || 0,
-        is_active: v.is_active
+        kilometrage: v.kilometrage || v.Kilometrage || 0,
+        is_active: v.is_active || v.Is_active
       };
     })
     .sort((a, b) => a.prix - b.prix);
@@ -77,24 +77,24 @@ export async function fetchSaleVehicles() {
   if (!data.success) throw new Error(data.message);
   
   return data.data
-    .filter(v => v.is_active !== 0)
+    .filter(v => (v.is_active ?? v.Is_active ?? v.IS_ACTIVE) !== 0)
     .map(v => {
       const formattedImages = parseVehicleImages(v);
       return {
-        id: v.id,
-        marque: v.marque,
-        modele: v.modele,
-        category: v.category,
-        annee: v.annee,
-        prix: v.sale_price,
-        mileage: v.kilometrage,
-        fuel: v.carburant,
-        transmission: v.transmission,
-        type: v.type,
+        id: v.id || v.Id || v.ID,
+        marque: v.marque || v.Marque || v.MARQUE,
+        modele: v.modele || v.Modele || v.MODELE,
+        category: v.category || v.Category || v.CATEGORY || v.categorie || v.Categorie,
+        annee: v.annee || v.Annee || v.ANNEE,
+        prix: v.sale_price || v.Sale_price || v.SALE_PRICE || v.prix || v.Prix,
+        mileage: v.kilometrage || v.Kilometrage || v.mileage || v.Mileage,
+        fuel: v.carburant || v.Carburant || v.fuel || v.Fuel,
+        transmission: v.transmission || v.Transmission || v.TRANSMISSION,
+        type: v.type || v.Type || v.TYPE,
         image: formattedImages[0] || null,
         images: formattedImages,
-        is_sold: v.is_sold == 1 ? 1 : 0,
-        is_active: v.is_active
+        is_sold: (v.is_sold == 1 || v.Is_sold == 1) ? 1 : 0,
+        is_active: v.is_active || v.Is_active
       };
     })
     .sort((a, b) => {
@@ -115,17 +115,17 @@ export async function fetchVehicleById(id) {
   const formattedImages = parseVehicleImages(v);
 
   return {
-    id: v.id,
-    marque: v.marque,
-    modele: v.modele,
-    category: v.category,
-    type: v.type,
-    prix: v.type === 'location' ? v.prix : v.sale_price,
+    id: v.id || v.Id || v.ID,
+    marque: v.marque || v.Marque || v.MARQUE,
+    modele: v.modele || v.Modele || v.MODELE,
+    category: v.category || v.Category || v.CATEGORY || v.categorie || v.Categorie,
+    type: v.type || v.Type || v.TYPE,
+    prix: (v.type || v.Type) === 'location' ? (v.prix || v.Prix) : (v.sale_price || v.Sale_price || v.prix || v.Prix),
     image: formattedImages[0] || null,
     images: formattedImages,
-    annee: v.annee,
-    carburant: v.carburant,
-    transmission: v.transmission,
-    is_active: v.is_active
+    annee: v.annee || v.Annee || v.ANNEE,
+    carburant: v.carburant || v.Carburant || v.CARBURANT,
+    transmission: v.transmission || v.Transmission || v.TRANSMISSION,
+    is_active: v.is_active || v.Is_active
   };
 }

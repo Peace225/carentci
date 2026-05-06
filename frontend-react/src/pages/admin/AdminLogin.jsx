@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+// On importe l'URL de base pour que ça marche aussi bien en local qu'en production
+import API_BASE_URL from "../../api/config";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // État pour la visibilité
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // NETTOYAGE AU MONTAGE : On s'assure qu'aucun vieux badge ne traîne
   useEffect(() => {
     localStorage.removeItem('adminToken');
   }, []);
@@ -19,25 +21,20 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      // Utilisation de API_BASE_URL au lieu de localhost en dur
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
 
       const data = await response.json();
-      
-      // LOG DE DÉBOGAGE : Pour voir exactement ce que ton serveur renvoie
       console.log("Réponse authentification :", data);
 
       if (response.ok && data.success) {
-        // RÉCUPÉRATION SÉCURISÉE DU TOKEN
-        // On vérifie les deux formats courants : data.token OU data.data.token
         const token = data.token || (data.data && data.data.token);
-
         if (token) {
           localStorage.setItem('adminToken', token);
-          // Redirection vers le Dashboard avec un état propre
           navigate('/admin', { replace: true });
         } else {
           setError("Le serveur n'a pas renvoyé de jeton de sécurité.");
@@ -46,7 +43,7 @@ export default function AdminLogin() {
         setError(data.message || 'Identifiants incorrects');
       }
     } catch (err) {
-      setError('Impossible de joindre le serveur (Vérifiez le port 5000)');
+      setError('Impossible de joindre le serveur. Vérifiez votre connexion.');
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +51,6 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 font-sans">
-      {/* Halo lumineux dynamique */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-orange-600/10 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className="bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-10 max-w-md w-full relative z-10 shadow-2xl backdrop-blur-xl">
@@ -74,6 +70,7 @@ export default function AdminLogin() {
         )}
 
         <form onSubmit={handleLogin} className="space-y-6">
+          {/* Champ Email */}
           <div className="space-y-2">
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Identifiant Admin</label>
             <input 
@@ -86,16 +83,35 @@ export default function AdminLogin() {
             />
           </div>
 
+          {/* Champ Mot de passe avec Toggle */}
           <div className="space-y-2">
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Clé d'accès</label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-5 text-white focus:border-orange-500/50 focus:bg-white/[0.04] focus:outline-none transition-all duration-300 placeholder:text-gray-800"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-5 pr-14 text-white focus:border-orange-500/50 focus:bg-white/[0.04] focus:outline-none transition-all duration-300 placeholder:text-gray-800"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 transition-colors p-1"
+              >
+                {showPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button 
@@ -105,7 +121,7 @@ export default function AdminLogin() {
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin italic"></span>
+                <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>
                 Synchronisation...
               </span>
             ) : 'Déverrouiller le système'}
