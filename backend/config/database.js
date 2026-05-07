@@ -1,37 +1,26 @@
-const { Pool } = require('pg');
+// FICHIER OBSOLÈTE
+// On utilise maintenant Supabase SDK via req.supabase dans server.js
+// Ce fichier existe juste pour éviter les crashs si un vieux import traîne
+
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-/**
- * CONFIGURATION POSTGRESQL (SUPABASE)
- * On ajoute des options de pool pour plus de stabilité sur Render
- */
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false // Indispensable pour les certificats auto-signés de Supabase
-    },
-    // Paramètres de stabilité pour éviter les coupures de connexion
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-    keepAlive: true
-});
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Test de connexion avec syntaxe moderne (Promise)
-const connectDB = async () => {
-    try {
-        const client = await pool.connect();
-        console.log('✅ DATABASE : Connexion PostgreSQL (Supabase) établie.');
-        client.release();
-    } catch (err) {
-        console.error('❌ DATABASE ERROR : Impossible de se connecter à Supabase.');
-        console.error('Détails :', err.message);
+// Faux pool pour compatibilité, mais on l'utilise plus
+const fakePool = {
+    query: async () => {
+        throw new Error('Utilise req.supabase au lieu de db.query. Ce fichier database.js est obsolète.');
+    },
+    connect: async () => {
+        throw new Error('Utilise req.supabase au lieu de pool.connect. Ce fichier database.js est obsolète.');
     }
 };
 
-connectDB();
+console.log('⚠️  database.js: Ce fichier est obsolète. Utilise Supabase SDK.');
 
 module.exports = {
-    query: (text, params) => pool.query(text, params),
-    pool: pool
+    query: fakePool.query,
+    pool: fakePool,
+    supabase // Au cas où, mais utilise req.supabase dans les routes
 };
