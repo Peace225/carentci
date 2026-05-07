@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  // 1. Vérif format Bearer
+  // 1. Vérif format Bearer - espace corrigé
   if (!authHeader ||!authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
       success: false,
