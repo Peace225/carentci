@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 // 1. Initialisation de Supabase (SDK)
@@ -19,15 +20,14 @@ app.use((req, res, next) => {
 
 // Configuration CORS 
 const allowedOrigins = [
-    'https://carentci.vercel.app',    // Ton URL Vercel
-    'http://localhost:5173',          // Vite local
+    'https://carentci.vercel.app',
+    'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5000'
 ];
 
 app.use(cors({
     origin: function(origin, callback) {
-        // Autoriser les requêtes sans origine (comme Postman ou les appels internes)
         if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
             callback(null, true);
         } else {
@@ -43,10 +43,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 /**
  * ROUTES DE SANTÉ (Pour Render)
  */
-app.get('/', (req, res) => {
-    res.json({ message: "🚀 CarentCI API est en ligne", mode: process.env.NODE_ENV });
-});
-
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', engine: 'Supabase Cloud' });
 });
@@ -78,15 +74,33 @@ app.use('/api/upload', uploadRoutes);
 app.use('/v', shareRoutes);
 
 /**
+ * SERVIR LE FRONTEND REACT EN PROD
+ * Ça règle l'erreur ENOENT: dist/index.html
+ */
+if (process.env.NODE_ENV === 'production') {
+    const distPath = path.join(__dirname, 'frontend-react/dist');
+    app.use(express.static(distPath));
+    
+    // Toutes les routes non-API renvoient vers index.html
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+    });
+} else {
+    // En dev, juste une route de base
+    app.get('/', (req, res) => {
+        res.json({ message: "🚀 CarentCI API est en ligne", mode: process.env.NODE_ENV });
+    });
+}
+
+/**
  * GESTION D'ERREURS GLOBALE
- * On affiche plus de détails pour débugger Render
  */
 app.use((err, req, res, next) => {
     console.error("❌ CRASH SYSTÈME :", err.stack);
     res.status(500).json({ 
         success: false, 
         message: "Erreur serveur interne", 
-        error: err.message // On laisse l'erreur visible pour faciliter ton débuggage actuel
+        error: err.message
     });
 });
 
