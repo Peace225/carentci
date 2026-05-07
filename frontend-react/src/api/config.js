@@ -1,34 +1,47 @@
-// On utilise une variable d'environnement pour plus de flexibilité sur Vercel
-// Si la variable VITE_API_URL n'est pas définie, on retombe sur tes valeurs par défaut
-const API_BASE_URL = import.meta.env.VITE_API_URL 
-  ? import.meta.env.VITE_API_URL 
-  : (import.meta.env.DEV ? 'http://localhost:5000' : 'https://www.carentci.com');
+// src/api/config.js
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV 
+    ? 'http://localhost:5000' 
+    : 'https://carentci-backend-api.onrender.com' // Ton backend Render, pas le front
+  );
 
 export default API_BASE_URL;
 
-// Session tracking (Ton code est excellent ici, on le garde)
-let sessionId = sessionStorage.getItem('visit_session_id');
-if (!sessionId) {
-  sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  sessionStorage.setItem('visit_session_id', sessionId);
+// Session tracking sécurisé
+let sessionId;
+try {
+  sessionId = sessionStorage.getItem('visit_session_id');
+  if (!sessionId) {
+    sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    sessionStorage.setItem('visit_session_id', sessionId);
+  }
+} catch {
+  // Fallback si sessionStorage bloqué : génère un ID temporaire
+  sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
+
 export const SESSION_ID = sessionId;
 
-// Fonction de tracking
+/**
+ * Track une visite. Ne track pas en DEV pour éviter de polluer.
+ */
 export function trackVisit(page, vehicleId = null, vehicleName = null, vehicleType = null) {
-  // On évite de tracker en mode développement pour ne pas polluer tes stats
-  if (import.meta.env.DEV) return;
+  if (import.meta.env.DEV || !API_BASE_URL) return;
 
-  fetch(API_BASE_URL + '/api/visits', {
+  fetch(`${API_BASE_URL}/api/visits`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    keepalive: true, // Important : la requête survit si l'user ferme la page
     body: JSON.stringify({
       session_id: sessionId,
       page,
       vehicle_id: vehicleId,
       vehicle_name: vehicleName,
       vehicle_type: vehicleType,
-      referrer: document.referrer || null
+      referrer: document.referrer || null,
+      user_agent: navigator.userAgent,
+      timestamp: new Date().toISOString()
     })
-  }).catch(() => {});
+  }).catch(() => {}); // Silent fail, on veut pas crasher l'app si le tracking fail
 }

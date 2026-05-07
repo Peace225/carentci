@@ -1,60 +1,70 @@
 const jwt = require('jsonwebtoken');
 
 /**
- * Middleware de sécurité Ultra-Premium
- * Protège les accès aux actions sensibles (POST, PUT, DELETE).
+ * Middleware JWT Ultra-Premium
+ * Protège POST, PUT, DELETE, PATCH
  */
 const authMiddleware = (req, res, next) => {
-    try {
-        // 1. Récupération du header 'Authorization'
-        const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-        // 2. Vérification rigoureuse du format
-        // On bloque si le header est absent, mal formé, ou contient la chaîne "undefined"
-        if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader === 'Bearer undefined') {
-            return res.status(401).json({ 
-                success: false, 
-                message: "Accès refusé. Session inexistante ou expirée." 
-            });
-        }
+  // 1. Vérif format Bearer
+  if (!authHeader ||!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: "Accès refusé. Authentification requise."
+    });
+  }
 
-        // 3. Extraction du jeton
-        const token = authHeader.split(' ')[1];
+  // 2. Extraction token
+  const token = authHeader.split(' ')[1];
 
-        if (!token) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "Jeton de sécurité manquant." 
-            });
-        }
+  if (!token || token === 'undefined' || token === 'null') {
+    return res.status(401).json({
+      success: false,
+      message: "Jeton de sécurité manquant."
+    });
+  }
 
-        // 4. Vérification avec la clé secrète du .env
-        const secretKey = process.env.JWT_SECRET || 'carrent_ci_secret_2026';
-        
-        // Utilisation de la méthode synchrone dans le try/catch
-        const decoded = jwt.verify(token, secretKey);
+  // 3. Vérif que JWT_SECRET existe - pas de fallback en prod
+  const secretKey = process.env.JWT_SECRET;
+  if (!secretKey) {
+    console.error("FATAL: JWT_SECRET non défini dans les variables d'env");
+    return res.status(500).json({
+      success: false,
+      message: "Erreur serveur. Configuration invalide."
+    });
+  }
 
-        // 5. Injection des données dans la requête
-        // On utilise 'admin' pour être cohérent avec le dashboard
-        req.admin = decoded;
-        req.user = decoded; // Compatibilité si tu utilises 'user' ailleurs
+  try {
+    // 4. Vérification du token
+    const decoded = jwt.verify(token, secretKey);
 
-        // 6. Autorisation accordée : passage au contrôleur
-        next();
+    // 5. Injection dans req pour les contrôleurs
+    req.admin = decoded;
+    req.user = decoded;
 
-    } catch (error) {
-        // Gestion des logs pour le développeur (ne pas envoyer au client)
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ success: false, message: "Votre session a expiré." });
-        }
-        
-        console.error("Erreur Auth Middleware :", error.message);
-        
-        return res.status(401).json({ 
-            success: false, 
-            message: "Signature de sécurité invalide." 
-        });
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: "Votre session a expiré. Reconnectez-vous."
+      });
     }
+
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: "Signature de sécurité invalide."
+      });
+    }
+
+    console.error("Erreur Auth Middleware:", error.message);
+    return res.status(401).json({
+      success: false,
+      message: "Authentification échouée."
+    });
+  }
 };
 
 module.exports = { authMiddleware };
