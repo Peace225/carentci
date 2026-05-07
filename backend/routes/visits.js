@@ -2,10 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('./auth');
 
-// Plus besoin de initVisitsTable() ici.
-// Crée la table direct dans Supabase Dashboard > SQL Editor
-// Je te mets le SQL à la fin.
-
 /**
  * 🛰️ POST /api/visits — Enregistrer une visite
  */
@@ -16,8 +12,8 @@ router.post('/', async (req, res) => {
         const ua = req.headers['user-agent'] || '';
 
         const { error } = await req.supabase
-           .from('page_visits')
-           .insert({
+          .from('page_visits')
+          .insert({
                 session_id: session_id || null,
                 page: page || 'unknown',
                 vehicle_id: vehicle_id || null,
@@ -44,76 +40,92 @@ router.get('/stats', authMiddleware, async (req, res) => {
         const { days = 30, vehicleType = 'all' } = req.query;
         const d = parseInt(days);
 
-        // Date de début pour le filtre
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - d);
         const startDateISO = startDate.toISOString();
 
-        // Helper pour filtrer par type
-        const buildQuery = (table) => {
-            let query = req.supabase.from(table).select('*', { count: 'exact', head: false });
-            query = query.gte('visited_at', startDateISO);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
 
+        const weekStartDate = new Date();
+        weekStartDate.setDate(weekStartDate.getDate() - 7);
+
+        // Helper pour appliquer le filtre vehicle_type
+        const applyVehicleTypeFilter = (query) => {
             if (vehicleType === 'location') {
-                query = query.or('vehicle_type.eq.location,vehicle_type.is.null');
+                return query.or('vehicle_type.eq.location,vehicle_type.is.null');
             } else if (vehicleType === 'vente') {
-                query = query.eq('vehicle_type', 'vente');
+                return query.eq('vehicle_type', 'vente');
             }
             return query;
         };
 
         // 1. Total, Today, This Week
-        const todayISO = new Date().toISOString().split('T')[0];
-        const weekStartDate = new Date();
-        weekStartDate.setDate(weekStartDate.getDate() - 7);
+        let totalQuery = req.supabase.from('page_visits').select('*', { count: 'exact', head: true }).gte('visited_at', startDateISO);
+        let todayQuery = req.supabase.from('page_visits').select('*', { count: 'exact', head: true }).gte('visited_at', todayStart.toISOString()).lte('visited_at', todayEnd.toISOString());
+        let weekQuery = req.supabase.from('page_visits').select('*', { count: 'exact', head: true }).gte('visited_at', weekStartDate.toISOString());
+
+        totalQuery = applyVehicleTypeFilter(totalQuery);
+        todayQuery = applyVehicleTypeFilter(todayQuery);
+        weekQuery = applyVehicleTypeFilter(weekQuery);
 
         const [totalRes, todayRes, weekRes] = await Promise.all([
-            buildQuery('page_visits').select('*', { count: 'exact', head: true }),
-            req.supabase.from('page_visits').select('*', { count: 'exact', head: true })
-               .gte('visited_at', `${todayISO}T00:00:00Z`)
-               .lte('visited_at', `${todayISO}T23:59:59Z`)
-               .match(vehicleType === 'location'? {} : vehicleType === 'vente'? { vehicle_type: 'vente' } : {}),
-            buildQuery('page_visits').gte('visited_at', weekStartDate.toISOString()).select('*', { count: 'exact', head: true })
+            totalQuery,
+            todayQuery,
+            weekQuery
         ]);
 
-        // 2. Visites par page - on utilise une RPC pour le GROUP BY
-        const { data: byPage, error: byPageErr } = await req.supabase.rpc('get_visits_by_page', {
+        if (totalRes.error) throw totalRes.error;
+        if (todayRes.error) throw todayRes.error;
+        if (weekRes.error) throw weekRes.error;
+
+        // 2. RPC calls
+        const rpcParams = {
             start_date: startDateISO,
             vehicle_type_filter: vehicleType
-        });
+        };
+
+        const [
+            { data: byPage, error: byPageErr },
+            { data: topVehicles, error: topVehiclesErr },
+            { data: byDay, error: byDayErr },
+            { data: conversions, error: convErr }
+        ] = await Promise.all([
+            req.supabase.rpc('get_visits_by_page', rpcParams),
+            req.supabase.rpc('get_top_vehicles', rpcParams),
+            req.supabase.rpc('get_visits_by_day', rpcParams),
+            req.supabase.rpc('get_conversions', rpcParams)
+        ]);
+
         if (byPageErr) throw byPageErr;
-
-        // 3. Top véhicules
-        const { data: topVehicles, error: topVehiclesErr } = await req.supabase.rpc('get_top_vehicles', {
-            start_date: startDateISO,
-            vehicle_type_filter: vehicleType
-        });
         if (topVehiclesErr) throw topVehiclesErr;
-
-        // 4. Visites par jour
-        const { data: byDay, error: byDayErr } = await req.supabase.rpc('get_visits_by_day', {
-            start_date: startDateISO,
-            vehicle_type_filter: vehicleType
-        });
         if (byDayErr) throw byDayErr;
-
-        // 5. Conversions + taux
-        const { data: conversions, error: convErr } = await req.supabase.rpc('get_conversions', {
-            start_date: startDateISO,
-            vehicle_type_filter: vehicleType
-        });
         if (convErr) throw convErr;
 
-        const unique_sessions = byDay.reduce((acc, cur) => acc + cur.unique_sessions, 0);
-        const converted_sessions = conversions.length;
+        // 3. Taux de conversion - on compte les sessions uniques
+        let uniqueSessionsQuery = req.supabase
+           .from('page_visits')
+           .select('session_id')
+           .gte('visited_at', startDateISO)
+           .not('session_id', 'is', null);
+
+        uniqueSessionsQuery = applyVehicleTypeFilter(uniqueSessionsQuery);
+
+        const { data: sessionsData, error: sessionsErr } = await uniqueSessionsQuery;
+        if (sessionsErr) throw sessionsErr;
+
+        const unique_sessions = new Set(sessionsData.map(s => s.session_id)).size;
+        const converted_sessions = conversions? conversions.length : 0;
         const conversion_rate = unique_sessions > 0? Math.round((converted_sessions / unique_sessions) * 100) : 0;
 
         res.json({
             success: true,
             data: {
-                total: totalRes.count,
-                today: todayRes.count,
-                this_week: weekRes.count,
+                total: totalRes.count || 0,
+                today: todayRes.count || 0,
+                this_week: weekRes.count || 0,
                 byPage: byPage || [],
                 topVehicles: topVehicles || [],
                 byDay: byDay || [],

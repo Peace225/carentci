@@ -1,39 +1,61 @@
 const jwt = require('jsonwebtoken');
+const { supabase } = require('../config/supabase');
+const bcrypt = require('bcryptjs');
 
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+    
+    console.log('[LOGIN] Tentative:', email);
+
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email et mot de passe requis' });
+    }
 
     try {
-        // 1. Vérification de l'utilisateur (Exemple simplifié)
-        // Dans la réalité, compare avec ta base de données et utilise bcrypt pour le mot de passe
-        if (email === "admin@carent.ci" && password === "ton_mot_de_passe_securise") {
-            
-            // 2. Définition du Payload (les données contenues dans le token)
-            const payload = {
-                id: 1,
-                role: 'admin',
-                name: 'Developpeur'
-            };
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle();
 
-            // 3. Création du Token
-            // Utilise la clé secrète de ton fichier .env
-            const token = jwt.sign(
-                payload, 
-                process.env.JWT_SECRET || 'carrent_ci_secret_2026', 
-                { expiresIn: '24h' } // Le token expire après 24 heures
-            );
-
-            // 4. Envoi de la réponse avec le TOKEN
-            return res.json({
-                success: true,
-                message: "Connexion réussie",
-                token: token // C'est ce champ que le frontend va lire
-            });
+        if (error) {
+            console.error('[LOGIN] Erreur Supabase:', error);
+            return res.status(500).json({ success: false, message: 'Erreur serveur' });
         }
 
-        return res.status(401).json({ success: false, message: "Identifiants invalides" });
+        if (!user) {
+            console.log('[LOGIN] User introuvable');
+            return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        
+        if (!isPasswordValid) {
+            console.log('[LOGIN] Mot de passe invalide');
+            return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+        }
+
+        if (user.role !== 'admin') {
+            console.log('[LOGIN] Rôle refusé:', user.role);
+            return res.status(403).json({ success: false, message: 'Accès refusé' });
+        }
+
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '24h' }
+        );
+
+        console.log('[LOGIN] Succès pour:', email);
+        
+        return res.json({
+            success: true,
+            message: "Connexion réussie",
+            token: token
+        });
 
     } catch (error) {
+        console.error('[LOGIN] Catch error:', error);
         res.status(500).json({ success: false, message: "Erreur serveur" });
     }
 };
