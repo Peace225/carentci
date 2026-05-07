@@ -28,12 +28,12 @@ export default function ShowroomSection() {
 
   // 1. Fetching des données avec TanStack Query
   const { data: rentals = [], isLoading: loadingRental } = useQuery({ 
-    queryKey: ["rental-vehicles"], 
+    queryKey: ["rental"], 
     queryFn: fetchRentalVehicles 
   })
   
   const { data: sales = [], isLoading: loadingSale } = useQuery({ 
-    queryKey: ["sale-vehicles"], 
+    queryKey: ["sale"], 
     queryFn: fetchSaleVehicles 
   })
 
@@ -42,13 +42,24 @@ export default function ShowroomSection() {
     const rawData = isRental ? rentals : sales
     
     let result = rawData.filter(v => {
-      const matchMarque = filters.marque === "all" || v.marque === filters.marque
-      const matchType = !filters.typeVehicule || v.categorie?.toLowerCase() === filters.typeVehicule.toLowerCase()
-      const matchAnnee = !filters.annee || v.annee?.toString() === filters.annee
-      const matchTrans = !filters.transmission || v.transmission === filters.transmission
-      const matchCarb = !filters.carburant || v.carburant === filters.carburant
-      const matchKm = !filters.kilometrageMax || (v.kilometrage || 0) <= parseInt(filters.kilometrageMax)
-      const matchPrix = !filters.prixMax || (v.prix || v.sale_price || 0) <= parseInt(filters.prixMax)
+      // Correspondance avec les noms de colonnes de ton backend/Supabase
+      const vMarque = v.brand || v.marque;
+      const vType = v.specifications?.category_type || v.categorie || v.type;
+      const vAnnee = v.year || v.annee;
+      const vTrans = v.specifications?.transmission || v.transmission;
+      const vCarb = v.specifications?.fuel || v.carburant;
+      const vKm = v.specifications?.mileage || v.kilometrage || 0;
+      
+      // Gestion des prix selon location ou vente (Supabase columns)
+      const vPrix = isRental ? (v.price_per_day || v.prix) : (v.sale_price || v.prix);
+
+      const matchMarque = filters.marque === "all" || vMarque === filters.marque
+      const matchType = !filters.typeVehicule || vType?.toLowerCase() === filters.typeVehicule.toLowerCase()
+      const matchAnnee = !filters.annee || vAnnee?.toString() === filters.annee
+      const matchTrans = !filters.transmission || vTrans === filters.transmission
+      const matchCarb = !filters.carburant || vCarb === filters.carburant
+      const matchKm = !filters.kilometrageMax || vKm <= parseInt(filters.kilometrageMax)
+      const matchPrix = !filters.prixMax || (vPrix || 0) <= parseInt(filters.prixMax)
       
       return matchMarque && matchType && matchAnnee && matchTrans && matchCarb && matchKm && matchPrix
     })
@@ -57,8 +68,8 @@ export default function ShowroomSection() {
     if (isRental && filters.zone === "Hors Abidjan") {
       return result.map(v => ({
         ...v,
-        prixOriginal: v.prix,
-        prix: (v.prix || 0) + 10000,
+        prixOriginal: v.price_per_day || v.prix,
+        prix: (v.price_per_day || v.prix || 0) + 10000,
         chauffeurObligatoire: true,
         badgeInfo: "Chauffeur inclus"
       }))
@@ -198,7 +209,8 @@ export default function ShowroomSection() {
         )}
       </div>
 
-      <style jsx>{`
+      {/* CORRECTION DU WARNING JSX */}
+      <style dangerouslySetInnerHTML={{ __html: `
         .select-premium, .input-premium {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.08);
@@ -216,7 +228,7 @@ export default function ShowroomSection() {
           background: rgba(255, 255, 255, 0.06);
         }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-      `}</style>
+      `}} />
     </section>
   )
 }

@@ -1,4 +1,4 @@
-import API_BASE_URL from './config'
+import API_BASE_URL from './config';
 
 /**
  * Utilitaire pour les headers d'authentification.
@@ -12,26 +12,24 @@ const getAuthHeaders = () => {
 };
 
 /**
- * Utilitaire pour nettoyer les URLs d'images.
+ * Parseur universel pour le champ images (gère le JSONB de Supabase ou les anciens formats).
  */
-const formatImageUrl = (url) => {
-  if (!url) return "https://via.placeholder.com/400x300?text=Pas+d'image";
-  if (url.startsWith('http')) return url;
-  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-};
-
-/**
- * Parseur universel pour le champ images (gère JSON string ou Array).
- */
-const parseVehicleImages = (v) => {
-  const rawImages = v.Images || v.images || v.IMAGES;
+const parseVehicleImages = (rawImages) => {
+  if (!rawImages) return [];
   let parsed = [];
   try {
-    parsed = typeof rawImages === 'string' ? JSON.parse(rawImages) : (Array.isArray(rawImages) ? rawImages : []);
+    // Supabase renvoie déjà un tableau, on gère juste le cas où c'est encore une string
+    parsed = typeof rawImages === 'string' ? JSON.parse(rawImages) : rawImages;
+    if (!Array.isArray(parsed)) parsed = [];
   } catch (e) {
     parsed = [];
   }
-  return parsed.map(formatImageUrl);
+  
+  return parsed.map(url => {
+    if (!url) return "https://via.placeholder.com/400x300?text=Pas+d'image";
+    if (url.startsWith('http')) return url; // Parfait pour tes nouvelles URLs Supabase Storage
+    return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`; // Fallback anciens uploads
+  });
 };
 
 export async function fetchRentalVehicles() {
@@ -41,27 +39,27 @@ export async function fetchRentalVehicles() {
   
   if (res.status === 401) throw new Error("Session expirée");
   const data = await res.json();
-  if (!data.success) throw new Error(data.message);
+  if (!data.success) throw new Error(data.message || "Erreur lors de la récupération");
   
-  // Filtre is_active !== 0 pour masquer les véhicules archivés (Soft Delete)
+  // Filtre is_active !== 0 pour masquer les véhicules archivés
   return data.data
-    .filter(v => (v.is_active ?? v.Is_active ?? v.IS_ACTIVE) !== 0)
+    .filter(v => v.is_active !== 0 && v.status !== 'archived')
     .map(v => {
-      const formattedImages = parseVehicleImages(v);
+      const images = parseVehicleImages(v.images);
       return {
-        id: v.id || v.Id || v.ID,
-        marque: v.marque || v.Marque || v.MARQUE,
-        modele: v.modele || v.Modele || v.MODELE,
-        category: v.category || v.Category || v.CATEGORY || v.categorie || v.Categorie,
-        annee: v.annee || v.Annee || v.ANNEE,
-        carburant: v.carburant || v.Carburant || v.CARBURANT,
-        transmission: v.transmission || v.Transmission || v.TRANSMISSION,
-        prix: v.prix || v.Prix || v.PRIX,
-        type: v.type || v.Type || v.TYPE,
-        image: formattedImages[0] || null,
-        images: formattedImages,
-        kilometrage: v.kilometrage || v.Kilometrage || 0,
-        is_active: v.is_active || v.Is_active
+        id: v.id,
+        marque: v.brand || v.marque,
+        modele: v.model || v.modele,
+        category: v.category || v.categorie,
+        annee: v.year || v.annee,
+        carburant: v.fuel || v.carburant || 'Non spécifié',
+        transmission: v.transmission || 'Non spécifiée',
+        prix: v.price_per_day || v.prix || 0,
+        type: v.type || 'location',
+        image: images[0] || "https://via.placeholder.com/400x300?text=Pas+d'image",
+        images: images,
+        kilometrage: v.mileage || v.kilometrage || 0,
+        is_active: v.is_active !== undefined ? v.is_active : 1
       };
     })
     .sort((a, b) => a.prix - b.prix);
@@ -74,27 +72,27 @@ export async function fetchSaleVehicles() {
   
   if (res.status === 401) throw new Error("Session expirée");
   const data = await res.json();
-  if (!data.success) throw new Error(data.message);
+  if (!data.success) throw new Error(data.message || "Erreur lors de la récupération");
   
   return data.data
-    .filter(v => (v.is_active ?? v.Is_active ?? v.IS_ACTIVE) !== 0)
+    .filter(v => v.is_active !== 0 && v.status !== 'archived')
     .map(v => {
-      const formattedImages = parseVehicleImages(v);
+      const images = parseVehicleImages(v.images);
       return {
-        id: v.id || v.Id || v.ID,
-        marque: v.marque || v.Marque || v.MARQUE,
-        modele: v.modele || v.Modele || v.MODELE,
-        category: v.category || v.Category || v.CATEGORY || v.categorie || v.Categorie,
-        annee: v.annee || v.Annee || v.ANNEE,
-        prix: v.sale_price || v.Sale_price || v.SALE_PRICE || v.prix || v.Prix,
-        mileage: v.kilometrage || v.Kilometrage || v.mileage || v.Mileage,
-        fuel: v.carburant || v.Carburant || v.fuel || v.Fuel,
-        transmission: v.transmission || v.Transmission || v.TRANSMISSION,
-        type: v.type || v.Type || v.TYPE,
-        image: formattedImages[0] || null,
-        images: formattedImages,
-        is_sold: (v.is_sold == 1 || v.Is_sold == 1) ? 1 : 0,
-        is_active: v.is_active || v.Is_active
+        id: v.id,
+        marque: v.brand || v.marque,
+        modele: v.model || v.modele,
+        category: v.category || v.categorie,
+        annee: v.year || v.annee,
+        prix: v.sale_price || v.prix || 0,
+        kilometrage: v.mileage || v.kilometrage || 0,
+        carburant: v.fuel || v.carburant || 'Non spécifié',
+        transmission: v.transmission || 'Non spécifiée',
+        type: v.type || 'vente',
+        image: images[0] || "https://via.placeholder.com/400x300?text=Pas+d'image",
+        images: images,
+        is_sold: (v.is_sold === true || v.is_sold === 1) ? 1 : 0,
+        is_active: v.is_active !== undefined ? v.is_active : 1
       };
     })
     .sort((a, b) => {
@@ -112,20 +110,22 @@ export async function fetchVehicleById(id) {
   if (!data.success) throw new Error('Véhicule non trouvé');
   const v = data.data;
   
-  const formattedImages = parseVehicleImages(v);
+  const images = parseVehicleImages(v.images);
+  const isLocation = (v.type || v.category) === 'location';
 
   return {
-    id: v.id || v.Id || v.ID,
-    marque: v.marque || v.Marque || v.MARQUE,
-    modele: v.modele || v.Modele || v.MODELE,
-    category: v.category || v.Category || v.CATEGORY || v.categorie || v.Categorie,
-    type: v.type || v.Type || v.TYPE,
-    prix: (v.type || v.Type) === 'location' ? (v.prix || v.Prix) : (v.sale_price || v.Sale_price || v.prix || v.Prix),
-    image: formattedImages[0] || null,
-    images: formattedImages,
-    annee: v.annee || v.Annee || v.ANNEE,
-    carburant: v.carburant || v.Carburant || v.CARBURANT,
-    transmission: v.transmission || v.Transmission || v.TRANSMISSION,
-    is_active: v.is_active || v.Is_active
+    id: v.id,
+    marque: v.brand || v.marque,
+    modele: v.model || v.modele,
+    category: v.category || v.categorie,
+    type: v.type || (isLocation ? 'location' : 'vente'),
+    prix: isLocation ? (v.price_per_day || v.prix) : (v.sale_price || v.prix),
+    image: images[0] || "https://via.placeholder.com/400x300?text=Pas+d'image",
+    images: images,
+    annee: v.year || v.annee,
+    carburant: v.fuel || v.carburant || 'Non spécifié',
+    transmission: v.transmission || 'Non spécifiée',
+    is_active: v.is_active !== undefined ? v.is_active : 1,
+    is_sold: (v.is_sold === true || v.is_sold === 1) ? 1 : 0
   };
 }

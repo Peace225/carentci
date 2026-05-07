@@ -1,29 +1,25 @@
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-// Créer un pool de connexions pour de meilleures performances
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'carrent_ci',
-    port: process.env.DB_PORT || 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    // Cette configuration est la plus stable pour Supabase et Render
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
-// Utiliser les promesses pour une syntaxe async/await
-const promisePool = pool.promise();
-
-// Tester la connexion
-pool.getConnection((err, connection) => {
+// Test de connexion
+pool.connect((err, client, release) => {
     if (err) {
-        console.error('❌ Erreur de connexion à la base de données:', err.message);
+        console.error('❌ Erreur de connexion PostgreSQL (Supabase) :', err.message);
         return;
     }
-    console.log('✅ Connecté à la base de données MySQL');
-    connection.release();
+    console.log('✅ Connecté à la base de données PostgreSQL (Supabase)');
+    release();
 });
 
-module.exports = promisePool;
+module.exports = {
+    query: (text, params) => pool.query(text, params),
+    pool: pool
+};

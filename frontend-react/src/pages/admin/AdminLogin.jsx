@@ -76,6 +76,7 @@ export default function AdminLogin() {
             <input 
               type="email" 
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-5 text-white focus:border-orange-500/50 focus:bg-white/[0.04] focus:outline-none transition-all duration-300 placeholder:text-gray-800"
@@ -90,6 +91,7 @@ export default function AdminLogin() {
               <input 
                 type={showPassword ? "text" : "password"} 
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-5 pr-14 text-white focus:border-orange-500/50 focus:bg-white/[0.04] focus:outline-none transition-all duration-300 placeholder:text-gray-800"

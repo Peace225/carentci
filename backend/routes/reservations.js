@@ -1,13 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const reservationController = require('../controllers/reservationController');
-const { authMiddleware } = require('./auth');
+// ✅ CORRECTION : Le bon chemin vers le dossier middleware
+const { authMiddleware } = require('../middleware/auth'); 
 
-// Routes publiques
+// ==========================================
+// ROUTES PUBLIQUES (Client)
+// ==========================================
 router.post('/', reservationController.createReservation);
 router.get('/whatsapp/:whatsapp', reservationController.getReservationsByWhatsapp);
 
-// Routes admin protégées
+// ==========================================
+// ROUTES ADMIN PROTÉGÉES (Dashboard)
+// ==========================================
 router.get('/', authMiddleware, reservationController.getAllReservations);
 router.get('/stats', authMiddleware, reservationController.getStats);
 router.get('/:id', authMiddleware, reservationController.getReservationById);

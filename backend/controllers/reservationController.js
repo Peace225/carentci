@@ -1,329 +1,184 @@
-const Reservation = require('../models/Reservation');
-const Vehicle = require('../models/Vehicle');
-const { broadcastNotification } = require('../routes/notifications');
+// ⚠️ Les anciens imports MySQL (models/Reservation, models/Vehicle) ont été supprimés.
+// Tout passe maintenant par le Cloud Supabase de manière ultra-rapide !
 
-// Créer une nouvelle réservation
+// 1. Créer une nouvelle réservation (Depuis le Frontend)
 exports.createReservation = async (req, res) => {
     try {
-        const {
-            client_name,
-            client_whatsapp,
-            vehicle_id,
-            start_date,
-            start_time,
-            end_date,
-            end_time,
-            pickup_location,
-            with_driver,
-            driver_type,
-            message,
-            quantity,
-            session_id,
-            promo_code
-        } = req.body;
-
-        // Validation des champs obligatoires
-        if (!client_name || !client_name.trim()) {
-            return res.status(400).json({ success: false, message: 'Le nom du client est requis' });
-        }
-        if (!client_whatsapp || !/^[\d\s\+\-]{8,20}$/.test(client_whatsapp.trim())) {
-            return res.status(400).json({ success: false, message: 'Numéro WhatsApp invalide' });
-        }
-        if (!start_date || !end_date) {
-            return res.status(400).json({ success: false, message: 'Les dates sont requises' });
-        }
-
-        // Validation des dates
-        const startDateTime = new Date(start_date);
-        const endDateTime = new Date(end_date);
-        if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-            return res.status(400).json({ success: false, message: 'Format de date invalide' });
-        }
-        if (endDateTime <= startDateTime) {
-            return res.status(400).json({ success: false, message: 'La date de fin doit être après la date de début' });
-        }
-
-        // Validation quantité
-        const qty = parseInt(quantity) || 1;
-        if (qty < 1) {
-            return res.status(400).json({ success: false, message: 'La quantité doit être au moins 1' });
-        }
-
-        let total_price = 0;
-        const days = Math.ceil((endDateTime - startDateTime) / (1000 * 60 * 60 * 24));
+        const supabase = req.supabase;
         
-        // Si un véhicule est sélectionné, vérifier et calculer le prix
-        if (vehicle_id) {
-            const vehicle = await Vehicle.getById(vehicle_id);
-            if (!vehicle) {
-                return res.status(404).json({ success: false, message: 'Véhicule non trouvé' });
-            }
-            
-            const isAvailable = await Vehicle.checkAvailability(vehicle_id, start_date, end_date);
-            if (!isAvailable) {
-                return res.status(400).json({ success: false, message: 'Ce véhicule n\'est pas disponible pour ces dates' });
-            }
-            
-            // Validation autorisations sans chauffeur
-            if (driver_type === 'without') {
-                const horsAbidjan = with_driver === true || with_driver === 'true';
-                if (horsAbidjan && !vehicle.autorise_sans_chauffeur_hors_abidjan) {
-                    return res.status(400).json({ success: false, message: 'Ce véhicule n\'est pas autorisé sans chauffeur hors Abidjan.' });
-                }
-                if (!horsAbidjan && !vehicle.autorise_sans_chauffeur_abidjan) {
-                    return res.status(400).json({ success: false, message: 'Ce véhicule n\'est pas autorisé sans chauffeur dans Abidjan.' });
-                }
-            }
-            
-            const pricePerDay = with_driver ? vehicle.price_with_driver : vehicle.price_without_driver;
-            total_price = pricePerDay * days * qty;
+        // Le frontend envoie déjà les données formatées (customer_name, daily_price, etc.)
+        const { data, error } = await supabase
+            .from('reservations')
+            .insert([req.body])
+            .select();
+
+        if (error) {
+            console.error("Erreur Supabase:", error.message);
+            throw error;
         }
 
-        // Valider et appliquer le code promo
-        let promo_discount = 0;
-        let validated_promo = null;
-        if (promo_code && promo_code.trim()) {
-            const PromoCode = require('../models/PromoCode');
-            const promo = await PromoCode.validate(promo_code.trim(), client_whatsapp.trim());
-            if (promo) {
-                promo_discount = Math.round(total_price * promo.discount_percentage / 100);
-                total_price = total_price - promo_discount;
-                validated_promo = promo_code.trim();
-                // Marquer le code comme utilisé
-                await PromoCode.markAsUsed(promo_code.trim());
-            }
-        }
-        
-        const reservationId = await Reservation.create({
-            client_name: client_name.trim(),
-            client_whatsapp: client_whatsapp.trim(),
-            vehicle_id,
-            start_date,
-            start_time,
-            end_date,
-            end_time,
-            pickup_location: pickup_location ? pickup_location.trim() : '',
-            with_driver,
-            driver_type: driver_type || null,
-            total_price,
-            message: message ? message.trim() : '',
-            quantity: qty,
-            session_id: session_id || null,
-            promo_code: validated_promo,
-            promo_discount
-        });
-        
-        res.status(201).json({
-            success: true,
+        res.status(201).json({ 
+            success: true, 
             message: 'Réservation créée avec succès',
-            data: { id: reservationId, total_price, days, promo_discount }
+            data: data[0] 
         });
 
-        broadcastNotification({
-            type: 'new_reservation',
-            title: `Nouvelle réservation #${reservationId}`,
-            body: `${client_name.trim()} - ${total_price.toLocaleString('fr-FR')} FCFA`,
-            reservationId,
-            client_name: client_name.trim(),
-            total_price,
-            timestamp: new Date().toISOString()
-        });
-        
     } catch (error) {
-        console.error('Erreur création réservation:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la création de la réservation'
-        });
+        console.error('Erreur création réservation:', error.message);
+        res.status(500).json({ success: false, message: 'Erreur lors de la création de la réservation' });
     }
 };
 
-// Récupérer toutes les réservations
+// 2. Récupérer toutes les réservations (Pour le Dashboard Admin)
 exports.getAllReservations = async (req, res) => {
     try {
-        const { status, startDate, endDate } = req.query;
+        const supabase = req.supabase;
         
-        const filters = {};
-        if (status) filters.status = status;
-        if (startDate) filters.startDate = startDate;
-        if (endDate) filters.endDate = endDate;
-        
-        const reservations = await Reservation.getAll(filters);
-        
-        res.json({
-            success: true,
-            count: reservations.length,
-            data: reservations
-        });
+        const { data, error } = await supabase
+            .from('reservations')
+            .select('*')
+            .order('created_at', { ascending: false }); // Les plus récentes en premier
+
+        if (error) throw error;
+
+        res.json({ success: true, count: data.length, data });
         
     } catch (error) {
-        console.error('Erreur récupération réservations:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la récupération des réservations',
-            error: error.message
-        });
+        console.error('Erreur récupération:', error.message);
+        res.status(500).json({ success: false, message: 'Erreur lors de la récupération' });
     }
 };
 
-// Récupérer une réservation par ID
+// 3. Récupérer une réservation par ID
 exports.getReservationById = async (req, res) => {
     try {
+        const supabase = req.supabase;
         const { id } = req.params;
-        const reservation = await Reservation.getById(id);
+
+        const { data, error } = await supabase
+            .from('reservations')
+            .select('*')
+            .eq('id', id)
+            .single();
         
-        if (!reservation) {
-            return res.status(404).json({
-                success: false,
-                message: 'Réservation non trouvée'
-            });
-        }
+        if (error) throw error;
+        if (!data) return res.status(404).json({ success: false, message: 'Réservation non trouvée' });
         
-        res.json({
-            success: true,
-            data: reservation
-        });
+        res.json({ success: true, data });
         
     } catch (error) {
-        console.error('Erreur récupération réservation:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la récupération de la réservation',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// Récupérer les réservations par WhatsApp
+// 4. Récupérer par numéro WhatsApp (Historique Client)
 exports.getReservationsByWhatsapp = async (req, res) => {
     try {
+        const supabase = req.supabase;
         const { whatsapp } = req.params;
-        const reservations = await Reservation.getByWhatsapp(whatsapp);
+
+        const { data, error } = await supabase
+            .from('reservations')
+            .select('*')
+            .eq('customer_phone', whatsapp);
         
-        res.json({
-            success: true,
-            count: reservations.length,
-            data: reservations
-        });
+        if (error) throw error;
+        
+        res.json({ success: true, count: data.length, data });
         
     } catch (error) {
-        console.error('Erreur récupération réservations:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la récupération des réservations',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// Mettre à jour le statut d'une réservation
+// 5. Mettre à jour le statut (Ex: de 'pending' à 'confirmed' depuis le Dashboard)
 exports.updateReservationStatus = async (req, res) => {
     try {
+        const supabase = req.supabase;
         const { id } = req.params;
         const { status } = req.body;
         
         const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
         if (!validStatuses.includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Statut invalide'
-            });
+            return res.status(400).json({ success: false, message: 'Statut invalide' });
         }
         
-        const updated = await Reservation.updateStatus(id, status);
+        const { error } = await supabase
+            .from('reservations')
+            .update({ status: status })
+            .eq('id', id);
         
-        if (!updated) {
-            return res.status(404).json({
-                success: false,
-                message: 'Réservation non trouvée'
-            });
-        }
+        if (error) throw error;
         
-        res.json({
-            success: true,
-            message: 'Statut mis à jour avec succès'
-        });
+        res.json({ success: true, message: 'Statut mis à jour avec succès' });
         
     } catch (error) {
-        console.error('Erreur mise à jour statut:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la mise à jour du statut',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// Mettre à jour une réservation
+// 6. Mettre à jour des informations (Édition libre)
 exports.updateReservation = async (req, res) => {
     try {
+        const supabase = req.supabase;
         const { id } = req.params;
-        const updated = await Reservation.update(id, req.body);
+
+        const { error } = await supabase
+            .from('reservations')
+            .update(req.body)
+            .eq('id', id);
         
-        if (!updated) {
-            return res.status(404).json({
-                success: false,
-                message: 'Réservation non trouvée'
-            });
-        }
+        if (error) throw error;
         
-        res.json({
-            success: true,
-            message: 'Réservation mise à jour avec succès'
-        });
+        res.json({ success: true, message: 'Réservation mise à jour avec succès' });
         
     } catch (error) {
-        console.error('Erreur mise à jour réservation:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la mise à jour de la réservation',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// Supprimer une réservation
+// 7. Supprimer une réservation (Bouton Corbeille du Dashboard)
 exports.deleteReservation = async (req, res) => {
     try {
+        const supabase = req.supabase;
         const { id } = req.params;
-        const deleted = await Reservation.delete(id);
+
+        const { error } = await supabase
+            .from('reservations')
+            .delete()
+            .eq('id', id);
         
-        if (!deleted) {
-            return res.status(404).json({
-                success: false,
-                message: 'Réservation non trouvée'
-            });
-        }
+        if (error) throw error;
         
-        res.json({
-            success: true,
-            message: 'Réservation supprimée avec succès'
-        });
+        res.json({ success: true, message: 'Réservation supprimée avec succès' });
         
     } catch (error) {
-        console.error('Erreur suppression réservation:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la suppression de la réservation'
-        });
+        res.status(500).json({ success: false, message: 'Erreur lors de la suppression' });
     }
 };
 
-// Obtenir les statistiques
+// 8. Obtenir les statistiques rapides (Pour les widgets du Dashboard)
 exports.getStats = async (req, res) => {
     try {
-        const stats = await Reservation.getStats();
+        const supabase = req.supabase;
         
-        res.json({
-            success: true,
-            data: stats
-        });
+        const { data, error } = await supabase
+            .from('reservations')
+            .select('status, daily_price');
+        
+        if (error) throw error;
+        
+        const stats = {
+            total: data.length,
+            pending: data.filter(r => r.status === 'pending').length,
+            confirmed: data.filter(r => r.status === 'confirmed').length,
+            // Calcul basique du chiffre d'affaires sur les commandes terminées
+            revenue: data.filter(r => r.status === 'completed').reduce((sum, r) => sum + Number(r.daily_price || 0), 0)
+        };
+        
+        res.json({ success: true, data: stats });
         
     } catch (error) {
-        console.error('Erreur récupération statistiques:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la récupération des statistiques'
-        });
+        res.status(500).json({ success: false, message: 'Erreur lors de la récupération des statistiques' });
     }
 };

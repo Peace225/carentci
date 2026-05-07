@@ -35,8 +35,9 @@ export default function AdminLayout({ children }) {
       {/* 2. Zone de contenu principal */}
       <main className="flex-1 relative flex flex-col min-w-0 overflow-hidden">
         
-        {/* Overlay de grain de film ou texture subtile pour le look Premium */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] pointer-events-none"></div>
+        {/* ✅ CORRECTION : Suppression du lien externe noise.svg (Erreur 404) 
+            Remplacé par un effet de blend CSS natif pour garder un aspect texturé */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-white/5 mix-blend-overlay"></div>
 
         {/* Conteneur du contenu avec défilement fluide */}
         <div className="flex-1 overflow-y-auto p-6 md:p-10 lg:p-12 custom-scrollbar">
