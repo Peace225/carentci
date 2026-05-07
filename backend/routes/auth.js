@@ -65,10 +65,10 @@ router.post('/register', async (req, res) => {
 
         // 1. Vérifier si l'utilisateur existe
         const { data: existingUser, error: checkError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', normalizedEmail)
-          .maybeSingle();
+         .from('users')
+         .select('id')
+         .eq('email', normalizedEmail)
+         .maybeSingle();
 
         if (checkError) {
             console.error('Erreur check user:', checkError.message);
@@ -84,14 +84,14 @@ router.post('/register', async (req, res) => {
 
         // 3. Créer l'utilisateur
         const { data: newUser, error } = await supabase
-          .from('users')
-          .insert([{
+         .from('users')
+         .insert([{
                 email: normalizedEmail,
                 password: hashedPassword,
                 role: role || 'user'
             }])
-          .select('id, email, role')
-          .single();
+         .select('id, email, role')
+         .single();
 
         if (error) {
             console.error('Erreur insert user:', error.message);
@@ -126,10 +126,10 @@ router.post('/login', async (req, res) => {
 
         // 1. Chercher l'utilisateur
         const { data: user, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', normalizedEmail)
-          .maybeSingle();
+         .from('users')
+         .select('*')
+         .eq('email', normalizedEmail)
+         .maybeSingle();
 
         if (error) {
             console.error('Erreur fetch user:', error.message);
@@ -186,10 +186,10 @@ router.get('/me', authMiddleware, async (req, res) => {
         const supabase = req.supabase;
 
         const { data: user, error } = await supabase
-          .from('users')
-          .select('id, email, role, created_at')
-          .eq('id', req.user.id)
-          .maybeSingle();
+         .from('users')
+         .select('id, email, role, created_at')
+         .eq('id', req.user.id)
+         .maybeSingle();
 
         if (error) {
             console.error('Erreur fetch profil:', error.message);
@@ -211,5 +211,6 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
 });
 
+// Export correct : router par défaut + middleware en propriété
 module.exports = router;
 module.exports.authMiddleware = authMiddleware;

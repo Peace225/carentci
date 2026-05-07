@@ -7,23 +7,30 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 const app = express();
 
+// Injecte Supabase dans req
 app.use((req, res, next) => {
     req.supabase = supabase; 
     next();
 });
 
-const allowedOrigins = [
-    'https://carentci.vercel.app', // Ton Vercel
-    'http://localhost:5173',
-    'http://localhost:3000'
-];
+// CORS : nettoie les espaces et utilise la variable d'env Render
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : [
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ];
 
 app.use(cors({
     origin: function(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Autorise Postman/curl sans origin
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            callback(new Error('Non autorisé par CORS'));
+            console.log(`CORS bloqué pour origin: ${origin}`);
+            callback(null, false); // Ne crash plus
         }
     },
     credentials: true
@@ -64,20 +71,22 @@ app.use('/api/stats', overviewRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/v', shareRoutes);
 
+// Gestion d'erreurs : ne log pas la stack complète en prod
 app.use((err, req, res, next) => {
-    console.error("❌ CRASH SYSTÈME :", err.stack);
-    res.status(500).json({ 
+    console.error("❌ ERREUR:", err.message);
+    res.status(err.status || 500).json({ 
         success: false, 
-        message: "Erreur serveur interne", 
-        error: err.message
+        message: err.message || "Erreur serveur interne"
     });
 });
 
-const PORT = process.env.PORT || 5000;
+// Render force le port 10000
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, async () => {
     console.log(`\n==========================================`);
     console.log(`🚀 SERVEUR ACTIF : Port ${PORT}`);
+    console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
     try {
         const { error } = await supabase.from('vehicles').select('id').limit(1);
         if (error) throw error;

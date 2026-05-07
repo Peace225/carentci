@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicleController');
-const { authMiddleware } = require('../middleware/auth'); // C'est auth.js, pas authMiddleware.js
+const { authMiddleware } = require('../middleware/auth'); // Correct : auth.js
 
 // ============================================
 // ROUTES PUBLIQUES - Lecture seule
